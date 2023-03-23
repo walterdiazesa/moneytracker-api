@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "mysql"
+  url = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+model Transaction {
+  id        String      @id @db.VarChar(400)
+  title     String   @db.VarChar(50)
+  purchaseDate DateTime @default(now())
+  type TransactionType @default(minus)
+  from   String @db.Char(4)
+  currency   String @db.Char(3)
+  amount   Decimal @db.Decimal(10, 2)
+  orCurrency   String? @db.Char(3)
+  orAmount   Decimal? @db.Decimal(10, 2)
+  owner String  @db.VarChar(50)
+  category    Category     @relation(fields: [categoryId], references: [id])
+  categoryId  Int
+
+  @@index(categoryId)
+}
+
+model Category {
+  id      Int      @id @default(autoincrement())
+  name    String @db.VarChar(50)
+  transactions   Transaction[]
+}
+
+model StartTime {
+  id      Int      @id @default(autoincrement())
+  value DateTime @default(now())
+}
+
+enum TransactionType {
+  plus
+  minus
+}
