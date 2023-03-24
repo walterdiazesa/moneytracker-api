@@ -265,7 +265,12 @@ app.post("/transaction", async function (req, res) {
 app.get("/transaction/:from/:to", async function (req, res) {
   res.send(
     await prisma.transaction.findMany({
-      where: { purchaseDate: { gte: req.params.from, lte: req.params.to } },
+      where: {
+        purchaseDate: {
+          gte: new Date(req.params.from),
+          lte: new Date(req.params.to),
+        },
+      },
       ...transactionOptions,
     })
   );
