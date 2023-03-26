@@ -175,17 +175,17 @@ const getEmails = () => {
 const fillDefaultDbs = () => {
   /* const categories = await prisma.category.createMany({
     data: [
-      { name: "🃏 Miscelánea" },
-      { name: "🥖 Alimentos" },
-      { name: "🍣 Restaurante" },
-      { name: "🏋️‍♂️ Gimnasio" },
-      { name: "🧼 Belleza" },
-      { name: "🍾 Salidas" },
-      { name: "🏂 Experiencias" },
-      { name: "🚈 Transporte" },
-      { name: "🛍 Ropa" },
-      { name: "🏠 Hospedaje" },
-      { name: "💸 Income" },
+      { name: "🃏 Miscelánea", color: "EEE0DD" },
+      { name: "🥖 Alimentos", color: "F9CE58" },
+      { name: "🍣 Restaurante", color: "F99558" },
+      { name: "🏋️‍♂️ Gimnasio", color: "F958A6" },
+      { name: "🧼 Belleza", color: "C8F958" },
+      { name: "🍾 Salidas", color: "58F9EC" },
+      { name: "🏂 Experiencias", color: "4169e1" },
+      { name: "🚈 Transporte", color: "060a16" },
+      { name: "🛍 Ropa", color: "E1415B" },
+      { name: "🏠 Hospedaje", color: "E1A641" },
+      { name: "💸 Income", color: "157811" },
     ],
   }); */
   /* const startDateDB = await prisma.startTime.create({
@@ -297,14 +297,14 @@ app.patch("/category/:id", async function (req, res) {
   res.send(
     await prisma.category.update({
       where: { id: req.params.id },
-      data: { name: req.body.name },
+      data: req.body,
     })
   );
 });
 app.post("/category", async function (req, res) {
   res.send(
     await prisma.category.create({
-      data: { name: req.body.name },
+      data: req.body,
     })
   );
 });

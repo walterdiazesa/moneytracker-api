@@ -27,6 +27,7 @@ model Transaction {
 model Category {
   id      Int      @id @default(autoincrement())
   name    String @db.VarChar(50)
+  color String @db.Char(6)
   transactions   Transaction[]
 }
 
