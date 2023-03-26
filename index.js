@@ -11,6 +11,7 @@ import { PrismaClient } from "@prisma/client";
 import { getCurrencyExchangeRates } from "./utils/currency/index.js";
 import express from "express";
 import { v4 as uuid } from "uuid";
+import xss from "xss";
 
 const prisma = new PrismaClient();
 const app = express();
@@ -27,6 +28,14 @@ const imapConfig = {
 let startDate = new Date();
 let firstFetchDone = false;
 let boxCount = undefined;
+
+const sanitizeString = (string) => {
+  return xss(string, {
+    whiteList: {},
+    stripIgnoreTag: true,
+    stripIgnoreTagBody: true,
+  });
+};
 
 export const FROM = (from) => {
   let nestedFromOr;
@@ -88,23 +97,29 @@ const attachMsgParser = (msg) => {
             exchanges["currency"] = CURRENCY_PARSER.$;
             exchanges["amount"] = exchangedAmount;
           }
+          const sanitizedPlace = sanitizeString(place);
           const { id } = await prisma.transaction.upsert({
             where: { id: messageId },
             create: {
               ...parsedMail,
               ...exchanges,
-              title: place,
+              title: sanitizedPlace,
               from: cc,
               purchaseDate: date,
-              categoryId: PLACE_TO_CAT[place] || CATEGORIES["🃏 Miscelánea"],
+              categoryId:
+                PLACE_TO_CAT[sanitizedPlace] || CATEGORIES["🃏 Miscelánea"],
               owner: imapConfig.user,
               id: messageId,
             },
             update: {},
             select: { id: true },
           });
+          if (sanitizedPlace !== place)
+            console.log(
+              `Sanitized place name: ${sanitizedPlace}, original: ${place}`
+            );
           console.log(
-            `💳 New transaction "${id} - ${place} : ${exchanges.currency}${exchanges.amount}" created!`
+            `💳 New transaction "${id} - ${sanitizedPlace} : ${exchanges.currency}${exchanges.amount}" created!`
           );
         }
       }

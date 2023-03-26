@@ -194,6 +194,7 @@ export const PLACE_TO_CAT = {
   "VITTORIA SAS DI ALESS.": CATEGORIES["🃏 Miscelánea"],
   "UBER <span>&nbsp;</span><span>&nbsp;</span>*TRIP":
     CATEGORIES["🚈 Transporte"],
+  "UBER *TRIP": CATEGORIES["🚈 Transporte"],
   "RELAY PARTENZE": CATEGORIES["🃏 Miscelánea"],
   "RELAY MOLO A": CATEGORIES["🃏 Miscelánea"],
   "FOREXCHANGE AL MACCOP": CATEGORIES["🃏 Miscelánea"],
@@ -262,6 +263,7 @@ export const PLACE_TO_CAT = {
   "CENTROS PENALES OFI CE": CATEGORIES["🃏 Miscelánea"],
   "MUMA BISTRO BAR": CATEGORIES["🍾 Salidas"],
   "MULLIRI <span>&nbsp;</span>VJETER": CATEGORIES["🍣 Restaurante"],
+  "MULLIRI VJETER": CATEGORIES["🍣 Restaurante"],
   "VF SHOP RRUGA DIBRES": CATEGORIES["🃏 Miscelánea"],
   "SPAR 1": CATEGORIES["🥖 Alimentos"],
   "BYLIS PHARMA": CATEGORIES["🃏 Miscelánea"],
