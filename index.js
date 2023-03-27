@@ -158,17 +158,22 @@ const getEmails = () => {
     });
 
     imap.once("error", (err) => {
-      console.error("imapOnce > error", { err });
+      console.error("❌ imapOnce > error", { err });
     });
 
     imap.once("end", () => {
-      console.log("Connection ended");
-      imap.connect();
+      console.log("❌ Connection ended");
+      setTimeout(() => {
+        console.log("⚙️ Restarting...");
+        firstFetchDone = false;
+        getEmails();
+      }, 1000 * 10); // Restart after 10 seconds
+      // imap.connect();
     });
 
     imap.connect();
   } catch (ex) {
-    console.error("getMails > catch", { ex });
+    console.error("❌ getMails > catch", { ex });
   }
 };
 
@@ -189,7 +194,7 @@ const fillDefaultDbs = () => {
     ],
   }); */
   /* const startDateDB = await prisma.startTime.create({
-    data: { value: new Date() },
+    data: { value: new Date('06/06/2022') },
   }); */
 };
 
@@ -204,7 +209,13 @@ app.use((req, res, next) => {
 });
 
 app.get("/", function (req, res) {
-  res.send("✅ Health check");
+  if (!startDate || !prisma) res.status(500);
+  res.send({
+    status:
+      res.statusCode < 500
+        ? "✅ Health check"
+        : { startDate: typeof startDate, prisma: typeof prisma },
+  });
 });
 app.options("/", function (req, res) {
   res.send({
