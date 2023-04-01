@@ -207,19 +207,22 @@ export const getCurrencyExchangeRates = async () => {
   )
     return currencyRates.rates;
 
+  let response;
   try {
-    const response = await (
-      await fetch(
-        "https://api.apilayer.com/exchangerates_data/latest?base=USD",
-        {
-          method: "GET",
-          headers: { apiKey: "krahLWkI5rACWplDnp6UdkPdZjYWi6Wk" },
-        }
-      )
-    ).json();
+    response = await fetch(
+      "https://api.apilayer.com/exchangerates_data/latest?base=USD",
+      {
+        method: "GET",
+        headers: { apiKey: "krahLWkI5rACWplDnp6UdkPdZjYWi6Wk" },
+      }
+    );
+    response = await response.json();
     currencyRates = response;
   } catch (e) {
-    console.log("Something went wrong fetching currencyExchanges", { e });
+    console.log("❌ Something went wrong fetching currencyExchanges", {
+      e,
+      response,
+    });
   }
   return currencyRates.rates;
 };

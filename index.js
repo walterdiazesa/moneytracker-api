@@ -159,22 +159,27 @@ const getEmails = () => {
 
     imap.once("error", (err) => {
       console.error("❌ imapOnce > error", { err });
+      gracefullyRestartImap();
     });
 
     imap.once("end", () => {
       console.log("❌ Connection ended");
-      setTimeout(() => {
-        console.log("⚙️ Restarting...");
-        firstFetchDone = false;
-        getEmails();
-      }, 1000 * 10); // Restart after 10 seconds
+      gracefullyRestartImap();
       // imap.connect();
     });
 
     imap.connect();
   } catch (ex) {
-    console.error("❌ getMails > catch", { ex });
+    console.error("❌ getMails > catch", { ex }); // ex.code EPIPE, ex.source socket
   }
+};
+
+const gracefullyRestartImap = () => {
+  setTimeout(() => {
+    console.log("⚙️ Restarting...");
+    firstFetchDone = false;
+    getEmails();
+  }, 1000 * 10); // Restart after 10 seconds
 };
 
 const fillDefaultDbs = () => {
