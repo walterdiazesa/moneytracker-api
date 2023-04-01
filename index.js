@@ -1,17 +1,13 @@
 import Imap from "imap";
 import { simpleParser } from "mailparser";
-import {
-  BANK_LIST,
-  CATEGORIES,
-  CURRENCY_PARSER,
-  PLACE_TO_CAT,
-} from "./constants.js";
+import { BANK_LIST, CURRENCY_PARSER } from "./constants.js";
 import { parseHTMLMail } from "./utils/index.js";
 import { PrismaClient } from "@prisma/client";
 import { getCurrencyExchangeRates } from "./utils/currency/index.js";
 import express from "express";
 import { v4 as uuid } from "uuid";
 import xss from "xss";
+import { getCategoryFromPlace } from "./utils/parsers/category/index.js";
 
 const prisma = new PrismaClient();
 const app = express();
@@ -106,8 +102,7 @@ const attachMsgParser = (msg) => {
               title: sanitizedPlace,
               from: cc,
               purchaseDate: date,
-              categoryId:
-                PLACE_TO_CAT[sanitizedPlace] || CATEGORIES["🃏 Miscelánea"],
+              categoryId: getCategoryFromPlace(sanitizedPlace),
               owner: imapConfig.user,
               id: messageId,
             },
