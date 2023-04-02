@@ -61,6 +61,14 @@ export const CATEGORIES = {
   "💸 Income": 11,
 };
 
+export const PLACE_REGEX_TO_CAT = {
+  uber: CATEGORIES["🚈 Transporte"],
+  bolt: CATEGORIES["🚈 Transporte"],
+  airbnb: CATEGORIES["🏠 Hospedaje"],
+  mcdonald: CATEGORIES["🍣 Restaurante"],
+  kfc: CATEGORIES["🍣 Restaurante"],
+};
+
 export const PLACE_TO_CAT = {
   Baires: CATEGORIES["💸 Income"],
   "DIGICEL DING*75373953": CATEGORIES["🃏 Miscelánea"],
