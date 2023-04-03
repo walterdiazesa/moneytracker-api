@@ -281,6 +281,7 @@ app.delete("/transaction/:id", async function (req, res) {
   );
 });
 app.post("/transaction", async function (req, res) {
+  console.log("POST /transaction", { body: req.body });
   res.send(
     await prisma.transaction.create({
       data: { ...req.body, id: uuid() },
