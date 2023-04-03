@@ -198,6 +198,7 @@ const fillDefaultDbs = () => {
   }); */
 };
 
+// =*=*=*=*=*=*= C O R S =*=*=*=*=*=*=
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
@@ -208,6 +209,10 @@ app.use((req, res, next) => {
   return next();
 });
 
+// =*=*=*=*=*=*= UTILS =*=*=*=*=*=*=
+app.use(express.json());
+
+// =*=*=*=*=*=*= R O U T E S =*=*=*=*=*=*=
 app.get("/", function (req, res) {
   if (!startDate || !prisma) res.status(500);
   res.send({
@@ -281,7 +286,6 @@ app.delete("/transaction/:id", async function (req, res) {
   );
 });
 app.post("/transaction", async function (req, res) {
-  console.log("POST /transaction", { body: req.body });
   res.send(
     await prisma.transaction.create({
       data: { ...req.body, id: uuid() },
