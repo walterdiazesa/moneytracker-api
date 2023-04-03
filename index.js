@@ -8,6 +8,7 @@ import express from "express";
 import { v4 as uuid } from "uuid";
 import xss from "xss";
 import { getCategoryFromPlace } from "./utils/parsers/category/index.js";
+import { isValidDate } from "./utils/date/index.js";
 
 const prisma = new PrismaClient();
 const app = express();
@@ -206,6 +207,10 @@ app.use((req, res, next) => {
     "OPTIONS, GET, POST, PATCH, DELETE"
   );
   res.setHeader("Access-Control-Max-Age", 2592000); // 30 days
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers"
+  );
   return next();
 });
 
@@ -288,7 +293,13 @@ app.delete("/transaction/:id", async function (req, res) {
 app.post("/transaction", async function (req, res) {
   res.send(
     await prisma.transaction.create({
-      data: { ...req.body, id: uuid() },
+      data: {
+        ...req.body,
+        purchaseDate: isValidDate(req.body.purchaseDate)
+          ? new Date(req.body.purchaseDate)
+          : new Date(),
+        id: uuid(),
+      },
       include: { category: true },
     })
   );
@@ -298,8 +309,12 @@ app.get("/transaction/:from/:to", async function (req, res) {
     await prisma.transaction.findMany({
       where: {
         purchaseDate: {
-          gte: new Date(req.params.from),
-          lte: new Date(req.params.to),
+          gte: isValidDate(req.params.from)
+            ? new Date(req.params.from)
+            : new Date(),
+          lte: isValidDate(req.params.to)
+            ? new Date(req.params.to)
+            : new Date(),
         },
       },
       ...transactionOptions,
@@ -329,6 +344,6 @@ app.post("/category", async function (req, res) {
   startDate = (await prisma.startTime.findUnique({ where: { id: 1 } })).value;
   getEmails();
 })();
-app.listen(process.env.PORT || 3000, () =>
+app.listen(process.env.PORT || 3001, () =>
   console.log(`🚀 Server ready on ${process.env.PORT || 3000}`)
 );
