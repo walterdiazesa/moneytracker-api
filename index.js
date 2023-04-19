@@ -344,6 +344,6 @@ app.post("/category", async function (req, res) {
   startDate = (await prisma.startTime.findUnique({ where: { id: 1 } })).value;
   getEmails();
 })();
-app.listen(process.env.PORT || 3001, () =>
+app.listen(process.env.PORT || 3000, () =>
   console.log(`🚀 Server ready on ${process.env.PORT || 3000}`)
 );
