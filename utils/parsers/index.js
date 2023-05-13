@@ -1,6 +1,7 @@
 import { CURRENCY_PARSER } from "../../constants.js";
+import { getDateWithOffset } from "../date/index.js";
 
-export const parseStrip = (html, { parseStart, parseEnd }) => {
+export const parseStrip = (html, { parseStart, parseEnd, offset }) => {
   const slice = html.slice(
     html.indexOf(parseStart) + parseStart.length,
     html.indexOf(parseEnd)
@@ -20,14 +21,14 @@ export const parseStrip = (html, { parseStart, parseEnd }) => {
     cc,
     currency: CURRENCY_PARSER[currency] || currency,
     amount: amount.replace(",", ""),
-    date: new Date(`${date} ${time}`),
+    date: getDateWithOffset(new Date(`${date} ${time}`), offset),
     place: place.join(" "),
   };
 };
 
 export const sections = (
   html,
-  { parseStart, parseEnd, stripCard, segmentRow, segmentRowAlt }
+  { parseStart, parseEnd, stripCard, segmentRow, segmentRowAlt, offset }
 ) => {
   const [, cc] = html
     .slice(
@@ -50,7 +51,7 @@ export const sections = (
     .split("-");
   return {
     cc,
-    date: new Date(`${date} ${time}`),
+    date: getDateWithOffset(new Date(`${date} ${time}`), offset),
     place,
     amount,
     currency: "USD",
@@ -70,11 +71,14 @@ const segmentValue = (html, slice) => {
 
 export const segments = (
   html,
-  { stripCard, dateSlice, placeSlice, amountSlice, type }
+  { stripCard, dateSlice, placeSlice, amountSlice, type, offset }
 ) => {
   const cc = segmentValue(html, stripCard).replace(/[^0-9.]/g, "");
 
-  const date = new Date(segmentValue(html, dateSlice));
+  const date = getDateWithOffset(
+    new Date(segmentValue(html, dateSlice)),
+    offset
+  );
 
   const place = segmentValue(html, placeSlice).trim();
 

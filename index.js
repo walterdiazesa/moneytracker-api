@@ -154,7 +154,9 @@ const getEmails = () => {
     });
 
     imap.once("error", (err) => {
-      console.error("❌ imapOnce > error", { err });
+      if (err.code === "EPIPE" && err.source === "socket")
+        console.log("⚡️ Socket restarting...");
+      else console.error("❌ imapOnce > error", { err });
       gracefullyRestartImap();
     });
 

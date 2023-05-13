@@ -1,3 +1,7 @@
+import * as dotenv from "dotenv";
+dotenv.config();
+const TIME_OFFSETS = JSON.parse(process.env.TIME_OFFSETS || "{}");
+
 export const BANK_LIST = {
   "notificaciones@bancocuscatlan.com": [
     {
@@ -6,6 +10,7 @@ export const BANK_LIST = {
         "Se ha realizado una compra con su tarjeta titular de Banco CUSCATLAN XXXXXXXXXX",
       parseEnd: ". Consultas al ",
       parser: "parseStrip",
+      offset: TIME_OFFSETS["cuscatlan"],
     },
   ],
   "info@baccredomatic.com": [
@@ -20,6 +25,7 @@ export const BANK_LIST = {
       segmentRow: '<tr bgcolor="#F2F2F2">',
       segmentRowAlt: '<tr bgcolor="#F2F2F2">',
       parser: "sections",
+      offset: TIME_OFFSETS["bac"],
     },
   ],
   "ofsrep.ceosmuigw@wellsfargo.com": [
@@ -37,6 +43,7 @@ export const BANK_LIST = {
       placeSlice: "Baires",
       parser: "segments",
       type: "plus",
+      offset: TIME_OFFSETS["wells"],
     },
   ],
 };

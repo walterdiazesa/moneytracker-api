@@ -3,6 +3,7 @@ import cignacusca from "./mock/cignacusca.json" assert { type: "json" };
 import bairesfargo from "./mock/bairesfargo.json" assert { type: "json" };
 import linodebac from "./mock/linodebac.json" assert { type: "json" };
 import { BANK_LIST } from "./constants.js";
+import { getDateWithOffset } from "./utils/date/index.js";
 
 [linodebac, cignacusca, bairesfargo].map(
   ({ subject: title, html, from, output }) => {
@@ -16,7 +17,8 @@ import { BANK_LIST } from "./constants.js";
       if (parsed[key] !== output[key]) {
         if (
           key !== "date" ||
-          new Date(parsed[key]).toJSON() !== new Date(output[key]).toJSON()
+          new Date(parsed[key]).toJSON() !==
+            getDateWithOffset(new Date(output[key]), query.offset).toJSON()
         )
           throw new Error(
             `❌ Testing "${title}" failed on "${key}", expected: ${output[key]}, obtained: ${parsed[key]}`
