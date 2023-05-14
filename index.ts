@@ -1,14 +1,18 @@
 import Imap from "imap";
 import { simpleParser } from "mailparser";
-import { BANK_LIST, CURRENCY_PARSER } from "./constants.js";
-import { parseHTMLMail } from "./utils/index.js";
-import { PrismaClient } from "@prisma/client";
-import { getCurrencyExchangeRates } from "./utils/currency/index.js";
+import { Prisma, PrismaClient } from "@prisma/client";
 import express from "express";
 import { v4 as uuid } from "uuid";
 import xss from "xss";
-import { getCategoryFromPlace } from "./utils/parsers/category/index.js";
-import { isValidDate } from "./utils/date/index.js";
+import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
+import {
+  getCategoryFromPlace,
+  getAbsMonth,
+  getDateRange,
+  isValidDate,
+  getCurrencyExchangeRates,
+  parseHTMLMail,
+} from "@/utils";
 
 const prisma = new PrismaClient();
 const app = express();
@@ -26,7 +30,7 @@ let startDate = new Date();
 let firstFetchDone = false;
 let boxCount = undefined;
 
-const sanitizeString = (string) => {
+const sanitizeString = (string: string) => {
   return xss(string, {
     whiteList: {},
     stripIgnoreTag: true,
@@ -34,7 +38,7 @@ const sanitizeString = (string) => {
   });
 };
 
-export const FROM = (from) => {
+export const FROM = (from: string | string[]) => {
   let nestedFromOr;
 
   (Array.isArray(from) ? from : [from]).forEach((value, index) => {
@@ -52,10 +56,9 @@ const onEndFetch = () => {
   prisma.startTime
     .update({ where: { id: 1 }, data: { value: startDate } })
     .then(() => {});
-  // imap.end()
 };
 
-const attachFetchHandlers = (fetcher) => {
+const attachFetchHandlers = (fetcher: Imap.ImapFetch) => {
   fetcher.on("message", (msg) => {
     attachMsgParser(msg);
   });
@@ -65,15 +68,12 @@ const attachFetchHandlers = (fetcher) => {
   fetcher.once("end", onEndFetch);
 };
 
-/**
- * @param  {Imap.ImapMessage} msg
- */
-const attachMsgParser = (msg) => {
+const attachMsgParser = (msg: Imap.ImapMessage) => {
   msg.on("body", (stream) => {
     simpleParser(
       stream,
       async (err, { from, subject: title, html, messageId }) => {
-        if (err)
+        if (err || !html)
           return console.error("attachMsgParser > simpleParser", { err });
 
         const query =
@@ -126,7 +126,7 @@ const attachMsgParser = (msg) => {
 const getEmails = () => {
   try {
     const imap = new Imap(imapConfig);
-    imap.on("mail", (count) => {
+    imap.on("mail", (count: number) => {
       if (!firstFetchDone) {
         firstFetchDone = true;
         return;
@@ -239,16 +239,15 @@ app.options("/", function (req, res) {
     "DELETE /transaction/:id": "Delete transaction",
     "POST /transaction": "New transaction",
     "GET /transaction/:from/:to": "Get transactions between two dates",
+    "GET /transaction/expenses/:from/:to":
+      "Get sum of transactions grouped by category for each month between two dates",
     "GET /category": "All",
     "PATCH /category/:id": "Update category",
     "POST /category": "New category",
   });
 });
 
-/**
- * @type {import('@prisma/client').Prisma.TransactionFindManyArgs}
- */
-const transactionOptions = {
+const transactionOptions: Prisma.TransactionFindManyArgs = {
   include: { category: true },
   orderBy: { purchaseDate: "desc" },
 };
@@ -265,15 +264,25 @@ app.get("/transaction/:id", async function (req, res) {
 });
 app.get("/transaction/title/:title", async function (req, res) {
   res.send(
-    await (req.query.strict
-      ? prisma.transaction.findMany({
-          where: { title: req.params.title },
-          ...transactionOptions,
-        })
-      : prisma.transaction.findMany({
-          where: { title: { contains: req.params.title } },
-          ...transactionOptions,
-        }))
+    await prisma.transaction.findMany({
+      where: {
+        title: req.query.strict
+          ? req.params.title
+          : { contains: req.params.title },
+        ...(req.query.from &&
+          req.query.to && {
+            purchaseDate: {
+              gte: isValidDate(req.query.from)
+                ? new Date(req.query.from)
+                : new Date(),
+              lte: isValidDate(req.query.to)
+                ? new Date(req.query.to)
+                : new Date(),
+            },
+          }),
+      },
+      ...transactionOptions,
+    })
   );
 });
 app.patch("/transaction/:id", async function (req, res) {
@@ -318,9 +327,51 @@ app.get("/transaction/:from/:to", async function (req, res) {
             ? new Date(req.params.to)
             : new Date(),
         },
+        ...(req.query.title && {
+          title: req.query.strict
+            ? (req.query.title as string)
+            : { contains: req.query.title as string },
+        }),
       },
       ...transactionOptions,
     })
+  );
+});
+app.get("/transaction/expenses/:from/:to", async function (req, res) {
+  if (
+    !isValidDate(req.params.from) ||
+    !isValidDate(req.params.to) ||
+    new Date(req.params.from) > new Date(req.params.to)
+  )
+    return res.send([]);
+
+  const dateRange = getDateRange(
+    new Date(req.params.from),
+    new Date(req.params.to)
+  );
+  const expensesByMonth = await prisma.$transaction(
+    dateRange.map((date) =>
+      prisma.transaction.groupBy({
+        by: ["categoryId"],
+        where: {
+          purchaseDate: {
+            gte: getAbsMonth(date, "begin"),
+            lte: getAbsMonth(date, "end"),
+          },
+          type: "minus",
+        },
+        _sum: {
+          amount: true,
+        },
+      })
+    )
+  );
+
+  res.send(
+    expensesByMonth.reduce((acc, cVal, idx) => {
+      acc[getAbsMonth(dateRange[idx], "begin").toJSON()] = cVal;
+      return acc;
+    }, {})
   );
 });
 app.get("/category", async function (req, res) {
@@ -329,7 +380,7 @@ app.get("/category", async function (req, res) {
 app.patch("/category/:id", async function (req, res) {
   res.send(
     await prisma.category.update({
-      where: { id: req.params.id },
+      where: { id: Number(req.params.id) },
       data: req.body,
     })
   );

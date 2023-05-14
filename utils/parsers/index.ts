@@ -1,7 +1,12 @@
-import { CURRENCY_PARSER } from "../../constants.js";
-import { getDateWithOffset } from "../date/index.js";
+import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
+import { getDateWithOffset } from "@/utils";
 
-export const parseStrip = (html, { parseStart, parseEnd, offset }) => {
+type Query<T extends keyof typeof BANK_LIST> = (typeof BANK_LIST)[T][number];
+
+export const parseStrip = (
+  html: string,
+  { parseStart, parseEnd, offset }: Query<"notificaciones@bancocuscatlan.com">
+) => {
   const slice = html.slice(
     html.indexOf(parseStart) + parseStart.length,
     html.indexOf(parseEnd)
@@ -27,8 +32,15 @@ export const parseStrip = (html, { parseStart, parseEnd, offset }) => {
 };
 
 export const sections = (
-  html,
-  { parseStart, parseEnd, stripCard, segmentRow, segmentRowAlt, offset }
+  html: string,
+  {
+    parseStart,
+    parseEnd,
+    stripCard,
+    segmentRow,
+    segmentRowAlt,
+    offset,
+  }: Query<"info@baccredomatic.com">
 ) => {
   const [, cc] = html
     .slice(
@@ -58,7 +70,7 @@ export const sections = (
   };
 };
 
-const segmentValue = (html, slice) => {
+const segmentValue = (html: string, slice: string | string[]) => {
   return !Array.isArray(slice)
     ? slice
     : html
@@ -70,8 +82,15 @@ const segmentValue = (html, slice) => {
 };
 
 export const segments = (
-  html,
-  { stripCard, dateSlice, placeSlice, amountSlice, type, offset }
+  html: string,
+  {
+    stripCard,
+    dateSlice,
+    placeSlice,
+    amountSlice,
+    type,
+    offset,
+  }: Query<"ofsrep.ceosmuigw@wellsfargo.com">
 ) => {
   const cc = segmentValue(html, stripCard).replace(/[^0-9.]/g, "");
 
@@ -86,3 +105,5 @@ export const segments = (
 
   return { cc, date, place, amount, currency: "USD", type };
 };
+
+export * from "./category";

@@ -1,6 +1,8 @@
 import * as dotenv from "dotenv";
 dotenv.config();
-const TIME_OFFSETS = JSON.parse(process.env.TIME_OFFSETS || "{}");
+const TIME_OFFSETS: Record<string, number> = JSON.parse(
+  process.env.TIME_OFFSETS || "{}"
+);
 
 export const BANK_LIST = {
   "notificaciones@bancocuscatlan.com": [
@@ -52,7 +54,7 @@ export const CURRENCY_PARSER = {
   8: "ALL",
   $: "USD",
   "€": "EUR",
-};
+} as const;
 
 export const CATEGORIES = {
   "🃏 Miscelánea": 1,
@@ -66,7 +68,7 @@ export const CATEGORIES = {
   "🛍 Ropa": 9,
   "🏠 Hospedaje": 10,
   "💸 Income": 11,
-};
+} as const;
 
 export const PLACE_REGEX_TO_CAT = {
   uber: CATEGORIES["🚈 Transporte"],
@@ -74,7 +76,7 @@ export const PLACE_REGEX_TO_CAT = {
   airbnb: CATEGORIES["🏠 Hospedaje"],
   mcdonald: CATEGORIES["🍣 Restaurante"],
   kfc: CATEGORIES["🍣 Restaurante"],
-};
+} as const;
 
 export const PLACE_TO_CAT = {
   Baires: CATEGORIES["💸 Income"],
@@ -307,4 +309,4 @@ export const PLACE_TO_CAT = {
   "UJVARA E DRINIT": CATEGORIES["🍣 Restaurante"],
   HOPS: CATEGORIES["🍾 Salidas"],
   "CITY ART": CATEGORIES["🃏 Miscelánea"],
-};
+} as const;

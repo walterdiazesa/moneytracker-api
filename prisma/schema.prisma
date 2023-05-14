@@ -21,7 +21,7 @@ model Transaction {
   category    Category     @relation(fields: [categoryId], references: [id])
   categoryId  Int
 
-  @@index(categoryId)
+  @@index(fields: [categoryId, purchaseDate(sort: Desc)])
 }
 
 model Category {

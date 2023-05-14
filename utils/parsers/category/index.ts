@@ -2,7 +2,7 @@ import {
   CATEGORIES,
   PLACE_TO_CAT,
   PLACE_REGEX_TO_CAT,
-} from "../../../constants.js";
+} from "../../../constants";
 
 export const getCategoryFromPlace = (sanitizedPlace) => {
   for (const catRegex in PLACE_REGEX_TO_CAT)

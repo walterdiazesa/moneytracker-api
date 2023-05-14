@@ -1,9 +1,8 @@
-import { parseHTMLMail } from "./utils/index.js";
-import cignacusca from "./mock/cignacusca.json" assert { type: "json" };
-import bairesfargo from "./mock/bairesfargo.json" assert { type: "json" };
-import linodebac from "./mock/linodebac.json" assert { type: "json" };
-import { BANK_LIST } from "./constants.js";
-import { getDateWithOffset } from "./utils/date/index.js";
+import { parseHTMLMail, getDateWithOffset } from "@/utils/";
+import cignacusca from "@/mock/cignacusca.json";
+import bairesfargo from "@/mock/bairesfargo.json";
+import linodebac from "@/mock/linodebac.json";
+import { BANK_LIST } from "@/constants";
 
 [linodebac, cignacusca, bairesfargo].map(
   ({ subject: title, html, from, output }) => {

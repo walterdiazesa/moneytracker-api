@@ -1,3 +1,5 @@
+import { getDaysDiff, getAbsDate } from "@/utils";
+
 let currencyRates = {
   success: true,
   timestamp: 1679159402,
@@ -175,27 +177,6 @@ let currencyRates = {
     ZMW: 20.238393,
     ZWL: 321.999592,
   },
-};
-
-const getDaysDiff = (dateA, dateB) => {
-  const diffTime = Math.abs(dateB - dateA);
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-};
-
-const getAbsDate = (date) => {
-  const initDate = new Date(date);
-  let dateHelper = new Date(
-    initDate.getFullYear(),
-    initDate.getMonth(),
-    initDate.getDate(),
-    0,
-    0,
-    0,
-    0
-  );
-  return new Date(
-    dateHelper.getTime() - dateHelper.getTimezoneOffset() * 60000
-  );
 };
 
 export const getCurrencyExchangeRates = async () => {
