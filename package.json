@@ -30,6 +30,7 @@
     "@types/imap": "0.8.36",
     "@types/mailparser": "3.4.0",
     "@types/node": "20.1.4",
+    "@types/uuid": "9.0.1",
     "prisma": "4.14.0",
     "tsx": "3.12.7"
   }

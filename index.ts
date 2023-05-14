@@ -1,7 +1,7 @@
 import Imap from "imap";
 import { simpleParser } from "mailparser";
 import { Prisma, PrismaClient } from "@prisma/client";
-import express from "express";
+import express, { Request } from "express";
 import { v4 as uuid } from "uuid";
 import xss from "xss";
 import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
@@ -50,12 +50,43 @@ export const FROM = (from: string | string[]) => {
   return nestedFromOr;
 };
 
+const logSegmentPerf = ({
+  req: { query, params, method, route: { path } } = { route: {} } as Request,
+  segment,
+}: {
+  req?: Request;
+  segment?: string;
+}) => {
+  const structuredSegment = segment
+    ? `${segment} ${uuid().split("-")[0]}`
+    : uuid().split("-")[0];
+  console.log(
+    `⚡️ Start ${structuredSegment}${
+      !method ? "" : ` (${method} ${path})`
+    }, calledWith: ${JSON.stringify({ query, params }, null, 2)}`
+  );
+  const init = performance.now();
+  return (bundle?: object) =>
+    console.log(
+      `⚡️ End ${structuredSegment}${
+        !method ? "" : ` (${method} ${path})`
+      }, elapsed: ${performance.now() - init} ms${
+        !bundle
+          ? ""
+          : `, bundle: ${Buffer.byteLength(JSON.stringify(bundle))} bytes`
+      }`
+    );
+};
+
 const onEndFetch = () => {
   console.log(`Done fetching messages!`);
   startDate = new Date();
+  const perfLog = logSegmentPerf({ segment: "startTime.update" });
   prisma.startTime
     .update({ where: { id: 1 }, data: { value: startDate } })
-    .then(() => {});
+    .then(() => {
+      perfLog();
+    });
 };
 
 const attachFetchHandlers = (fetcher: Imap.ImapFetch) => {
@@ -83,8 +114,10 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
 
         // Founded transaction mail
         if (query) {
+          const perfLogParseMail = logSegmentPerf({ segment: "parseHTMLMail" });
           const { currency, amount, cc, date, place, ...parsedMail } =
             parseHTMLMail(html, query);
+          perfLogParseMail();
           const exchanges = { currency, amount };
           if (currency !== CURRENCY_PARSER.$) {
             const exchangedAmount =
@@ -95,6 +128,9 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
             exchanges["amount"] = exchangedAmount;
           }
           const sanitizedPlace = sanitizeString(place);
+          const perfLogUpsertTransaction = logSegmentPerf({
+            segment: "transaction.upsert",
+          });
           const { id } = await prisma.transaction.upsert({
             where: { id: messageId },
             create: {
@@ -110,6 +146,7 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
             update: {},
             select: { id: true },
           });
+          perfLogUpsertTransaction();
           if (sanitizedPlace !== place)
             console.log(
               `Sanitized place name: ${sanitizedPlace}, original: ${place}`
@@ -253,93 +290,103 @@ const transactionOptions: Prisma.TransactionFindManyArgs = {
   orderBy: { purchaseDate: "desc" },
 };
 app.get("/transaction", async function (req, res) {
-  res.send(await prisma.transaction.findMany(transactionOptions));
+  const perfLog = logSegmentPerf({ req });
+  const transactions = await prisma.transaction.findMany(transactionOptions);
+  perfLog(transactions);
+  res.send(transactions);
 });
 app.get("/starttime", async function (req, res) {
-  res.send(await prisma.startTime.findMany());
+  const perfLog = logSegmentPerf({ req });
+  const starttime = await prisma.startTime.findMany();
+  perfLog(starttime);
+  res.send(starttime);
 });
 app.get("/transaction/:id", async function (req, res) {
-  res.send(
-    await prisma.transaction.findUnique({
-      where: { id: req.params.id },
-      include: { category: true },
-    })
-  );
+  const perfLog = logSegmentPerf({ req });
+  const transaction = await prisma.transaction.findUnique({
+    where: { id: req.params.id },
+    include: { category: true },
+  });
+  perfLog(transaction);
+  res.send(transaction);
 });
 app.get("/transaction/title/:title", async function (req, res) {
-  res.send(
-    await prisma.transaction.findMany({
-      where: {
-        title: req.query.strict
-          ? req.params.title
-          : { contains: req.params.title },
-        ...(req.query.from &&
-          req.query.to && {
-            purchaseDate: {
-              gte: isValidDate(req.query.from)
-                ? new Date(req.query.from)
-                : new Date(),
-              lte: isValidDate(req.query.to)
-                ? new Date(req.query.to)
-                : new Date(),
-            },
-          }),
-      },
-      ...transactionOptions,
-    })
-  );
+  const perfLog = logSegmentPerf({ req });
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      title: req.query.strict
+        ? req.params.title
+        : { contains: req.params.title },
+      ...(req.query.from &&
+        req.query.to && {
+          purchaseDate: {
+            gte: isValidDate(req.query.from)
+              ? new Date(req.query.from)
+              : new Date(),
+            lte: isValidDate(req.query.to)
+              ? new Date(req.query.to)
+              : new Date(),
+          },
+        }),
+    },
+    ...transactionOptions,
+  });
+  perfLog(transactions);
+  res.send(transactions);
 });
 app.patch("/transaction/:id", async function (req, res) {
-  res.send(
-    await prisma.transaction.update({
-      where: { id: req.params.id },
-      data: req.body,
-      include: { category: true },
-    })
-  );
+  const perfLog = logSegmentPerf({ req });
+  const transaction = await prisma.transaction.update({
+    where: { id: req.params.id },
+    data: req.body,
+    include: { category: true },
+  });
+  perfLog(transaction);
+  res.send(transaction);
 });
 app.delete("/transaction/:id", async function (req, res) {
-  res.send(
-    await prisma.transaction.delete({
-      where: { id: req.params.id },
-    })
-  );
+  const perfLog = logSegmentPerf({ req });
+  const transaction = await prisma.transaction.delete({
+    where: { id: req.params.id },
+  });
+  perfLog(transaction);
+  res.send(transaction);
 });
 app.post("/transaction", async function (req, res) {
-  res.send(
-    await prisma.transaction.create({
-      data: {
-        ...req.body,
-        purchaseDate: isValidDate(req.body.purchaseDate)
-          ? new Date(req.body.purchaseDate)
-          : new Date(),
-        id: uuid(),
-      },
-      include: { category: true },
-    })
-  );
+  const perfLog = logSegmentPerf({ req });
+  const transaction = await prisma.transaction.create({
+    data: {
+      ...req.body,
+      purchaseDate: isValidDate(req.body.purchaseDate)
+        ? new Date(req.body.purchaseDate)
+        : new Date(),
+      id: uuid(),
+    },
+    include: { category: true },
+  });
+  perfLog(transaction);
+  res.send(transaction);
 });
 app.get("/transaction/:from/:to", async function (req, res) {
-  res.send(
-    await prisma.transaction.findMany({
-      where: {
-        purchaseDate: {
-          gte: isValidDate(req.params.from)
-            ? new Date(req.params.from)
-            : new Date(),
-          lte: isValidDate(req.params.to)
-            ? new Date(req.params.to)
-            : new Date(),
-        },
-        ...(req.query.title && {
-          title: req.query.strict
-            ? (req.query.title as string)
-            : { contains: req.query.title as string },
-        }),
+  const perfLog = logSegmentPerf({ req });
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      purchaseDate: {
+        gte: isValidDate(req.params.from)
+          ? new Date(req.params.from)
+          : new Date(),
+        lte: isValidDate(req.params.to) ? new Date(req.params.to) : new Date(),
       },
-      ...transactionOptions,
-    })
-  );
+      ...(req.query.title && {
+        title: req.query.strict
+          ? (req.query.title as string)
+          : { contains: req.query.title as string },
+      }),
+    },
+    ...transactionOptions,
+  });
+  perfLog(transactions);
+  res.send(transactions);
 });
 app.get("/transaction/expenses/:from/:to", async function (req, res) {
   if (
@@ -349,10 +396,17 @@ app.get("/transaction/expenses/:from/:to", async function (req, res) {
   )
     return res.send([]);
 
+  const perfLogDateRange = logSegmentPerf({ req, segment: "get dateRange" });
   const dateRange = getDateRange(
     new Date(req.params.from),
     new Date(req.params.to)
   );
+  perfLogDateRange();
+
+  const perfLogExpensesByMonth = logSegmentPerf({
+    req,
+    segment: "get expensesByMonth",
+  });
   const expensesByMonth = await prisma.$transaction(
     dateRange.map((date) =>
       prisma.transaction.groupBy({
@@ -370,35 +424,48 @@ app.get("/transaction/expenses/:from/:to", async function (req, res) {
       })
     )
   );
+  perfLogExpensesByMonth(expensesByMonth);
 
-  res.send(
-    expensesByMonth.reduce((acc, cVal, idx) => {
-      acc[getAbsMonth(dateRange[idx], "begin").toJSON()] = cVal;
-      return acc;
-    }, {})
-  );
+  const perfLogReducer = logSegmentPerf({
+    req,
+    segment: "reduce expensesByMonth",
+  });
+  const transactions = expensesByMonth.reduce((acc, cVal, idx) => {
+    acc[getAbsMonth(dateRange[idx], "begin").toJSON()] = cVal;
+    return acc;
+  }, {});
+  perfLogReducer();
+
+  res.send(transactions);
 });
 app.get("/category", async function (req, res) {
-  res.send(await prisma.category.findMany());
+  const perfLog = logSegmentPerf({ req });
+  const category = await prisma.category.findMany();
+  perfLog(category);
+  res.send(category);
 });
 app.patch("/category/:id", async function (req, res) {
-  res.send(
-    await prisma.category.update({
-      where: { id: Number(req.params.id) },
-      data: req.body,
-    })
-  );
+  const perfLog = logSegmentPerf({ req });
+  const category = await prisma.category.update({
+    where: { id: Number(req.params.id) },
+    data: req.body,
+  });
+  perfLog(category);
+  res.send(category);
 });
 app.post("/category", async function (req, res) {
-  res.send(
-    await prisma.category.create({
-      data: req.body,
-    })
-  );
+  const perfLog = logSegmentPerf({ req });
+  const categories = await prisma.category.create({
+    data: req.body,
+  });
+  perfLog(categories);
+  res.send(categories);
 });
 
 (async () => {
+  const perfLog = logSegmentPerf({ segment: "startTime.findUnique" });
   startDate = (await prisma.startTime.findUnique({ where: { id: 1 } })).value;
+  perfLog();
   getEmails();
 })();
 app.listen(process.env.PORT || 3000, () =>
