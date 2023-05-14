@@ -232,6 +232,7 @@ app.get("/", function (req, res) {
 app.options("/", function (req, res) {
   res.send({
     "GET /transaction": "All",
+    "GET /starttime": "All",
     "GET /transaction/:id": "Get transaction",
     "GET /transaction/title/:title":
       "Get transaction by title, append '?strict=true' for only displaying exact title",
@@ -253,6 +254,9 @@ const transactionOptions: Prisma.TransactionFindManyArgs = {
 };
 app.get("/transaction", async function (req, res) {
   res.send(await prisma.transaction.findMany(transactionOptions));
+});
+app.get("/starttime", async function (req, res) {
+  res.send(await prisma.startTime.findMany());
 });
 app.get("/transaction/:id", async function (req, res) {
   res.send(
