@@ -317,17 +317,20 @@ app.get("/transaction/title/:title", async function (req, res) {
       title: req.query.strict
         ? req.params.title
         : { contains: req.params.title },
-      ...(req.query.from &&
-        req.query.to && {
-          purchaseDate: {
+      ...((req.query.from || req.query.to) && {
+        purchaseDate: {
+          ...(req.query.from && {
             gte: isValidDate(req.query.from)
               ? new Date(req.query.from)
               : new Date(),
+          }),
+          ...(req.query.to && {
             lte: isValidDate(req.query.to)
               ? new Date(req.query.to)
               : new Date(),
-          },
-        }),
+          }),
+        },
+      }),
     },
     ...transactionOptions,
   });
