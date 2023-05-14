@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "tsx watch index.ts",
     "test": "tsx test.ts",
-    "start": "tsx -r newrelic index.ts"
+    "start": "npx tsx -r newrelic index.ts"
   },
   "keywords": [],
   "author": "",
