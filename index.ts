@@ -1,18 +1,12 @@
 import Imap from "imap";
 import { simpleParser } from "mailparser";
 import { Prisma, PrismaClient } from "@prisma/client";
-import express, { Request } from "express";
-import { v4 as uuid } from "uuid";
+import express, { Request, Express, Response, NextFunction } from "express";
+import { randomUUID } from "crypto";
 import xss from "xss";
 import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
-import {
-  getCategoryFromPlace,
-  getAbsMonth,
-  getDateRange,
-  isValidDate,
-  getCurrencyExchangeRates,
-  parseHTMLMail,
-} from "@/utils";
+import { getCategoryFromPlace, getAbsMonth, getDateRange, isValidDate, getCurrencyExchangeRates, parseHTMLMail } from "@/utils";
+import { trace } from "./trace";
 
 const prisma = new PrismaClient();
 const app = express();
@@ -42,51 +36,26 @@ export const FROM = (from: string | string[]) => {
   let nestedFromOr;
 
   (Array.isArray(from) ? from : [from]).forEach((value, index) => {
-    nestedFromOr = index
-      ? ["OR", ["FROM", value], nestedFromOr]
-      : ["FROM", value];
+    nestedFromOr = index ? ["OR", ["FROM", value], nestedFromOr] : ["FROM", value];
   });
 
   return nestedFromOr;
 };
 
-const logSegmentPerf = ({
-  req: { query, params, method, route: { path } } = { route: {} } as Request,
-  segment,
-}: {
-  req?: Request;
-  segment?: string;
-}) => {
-  const structuredSegment = segment
-    ? `${segment} ${uuid().split("-")[0]}`
-    : uuid().split("-")[0];
-  console.log(
-    `⚡️ Start ${structuredSegment}${
-      !method ? "" : ` (${method} ${path})`
-    }, calledWith: ${JSON.stringify({ query, params }, null, 2)}`
-  );
+const logSegmentPerf = ({ req: { query, params, method, route: { path } } = { route: {} } as Request, segment }: { req?: Request; segment?: string }) => {
+  const structuredSegment = segment ? `${segment} ${randomUUID().split("-")[0]}` : randomUUID().split("-")[0];
+  console.log(`⚡️ Start ${structuredSegment}${!method ? "" : ` (${method} ${path})`}, calledWith: ${JSON.stringify({ query, params }, null, 2)}`);
   const init = performance.now();
-  return (bundle?: object) =>
-    console.log(
-      `⚡️ End ${structuredSegment}${
-        !method ? "" : ` (${method} ${path})`
-      }, elapsed: ${performance.now() - init} ms${
-        !bundle
-          ? ""
-          : `, bundle: ${Buffer.byteLength(JSON.stringify(bundle))} bytes`
-      }`
-    );
+  return (bundle?: object) => console.log(`⚡️ End ${structuredSegment}${!method ? "" : ` (${method} ${path})`}, elapsed: ${performance.now() - init} ms${!bundle ? "" : `, bundle: ${Buffer.byteLength(JSON.stringify(bundle))} bytes`}`);
 };
 
 const onEndFetch = () => {
   console.log(`Done fetching messages!`);
   startDate = new Date();
   const perfLog = logSegmentPerf({ segment: "startTime.update" });
-  prisma.startTime
-    .update({ where: { id: 1 }, data: { value: startDate } })
-    .then(() => {
-      perfLog();
-    });
+  prisma.startTime.update({ where: { id: 1 }, data: { value: startDate } }).then(() => {
+    perfLog();
+  });
 };
 
 const attachFetchHandlers = (fetcher: Imap.ImapFetch) => {
@@ -101,68 +70,56 @@ const attachFetchHandlers = (fetcher: Imap.ImapFetch) => {
 
 const attachMsgParser = (msg: Imap.ImapMessage) => {
   msg.on("body", (stream) => {
-    simpleParser(
-      stream,
-      async (err, { from, subject: title, html, messageId }) => {
-        if (err || !html)
-          return console.error("attachMsgParser > simpleParser", { err });
+    simpleParser(stream, async (err, { from, subject: title, html, messageId }) => {
+      if (err || !html) return console.error("attachMsgParser > simpleParser", { err });
 
-        const query =
-          BANK_LIST[from.value[0].address]?.find(
-            ({ subject }) => subject === title
-          ) || undefined;
+      const query = BANK_LIST[from.value[0].address]?.find(({ subject }) => subject === title) || undefined;
 
-        // Founded transaction mail
-        if (query) {
-          const perfLogParseMail = logSegmentPerf({ segment: "parseHTMLMail" });
-          const { currency, amount, cc, date, place, ...parsedMail } =
-            parseHTMLMail(html, query);
-          perfLogParseMail();
-          const exchanges = { currency, amount };
-          if (currency !== CURRENCY_PARSER.$) {
-            const exchangedAmount =
-              amount / +(await getCurrencyExchangeRates())[currency];
-            exchanges["orCurrency"] = currency;
-            exchanges["orAmount"] = +amount;
-            exchanges["currency"] = CURRENCY_PARSER.$;
-            exchanges["amount"] = exchangedAmount;
-          }
-          const sanitizedPlace = sanitizeString(place);
-          const perfLogUpsertTransaction = logSegmentPerf({
-            segment: "transaction.upsert",
-          });
-          const { id } = await prisma.transaction.upsert({
-            where: { id: messageId },
-            create: {
-              ...parsedMail,
-              ...exchanges,
-              title: sanitizedPlace,
-              from: cc,
-              purchaseDate: date,
-              categoryId: getCategoryFromPlace(sanitizedPlace),
-              owner: imapConfig.user,
-              id: messageId,
-            },
-            update: {},
-            select: { id: true },
-          });
-          perfLogUpsertTransaction();
-          if (sanitizedPlace !== place)
-            console.log(
-              `Sanitized place name: ${sanitizedPlace}, original: ${place}`
-            );
-          console.log(
-            `💳 New transaction "${id} - ${sanitizedPlace} : ${exchanges.currency}${exchanges.amount}" created!`
-          );
+      // Founded transaction mail
+      if (query) {
+        const perfLogParseMail = logSegmentPerf({ segment: "parseHTMLMail" });
+        const { currency, amount, cc, date, place, ...parsedMail } = parseHTMLMail(html, query);
+        perfLogParseMail();
+        const exchanges = { currency, amount };
+        if (currency !== CURRENCY_PARSER.$) {
+          const exchangedAmount = amount / +(await getCurrencyExchangeRates())[currency];
+          exchanges["orCurrency"] = currency;
+          exchanges["orAmount"] = +amount;
+          exchanges["currency"] = CURRENCY_PARSER.$;
+          exchanges["amount"] = exchangedAmount;
         }
+        const sanitizedPlace = sanitizeString(place);
+        const perfLogUpsertTransaction = logSegmentPerf({
+          segment: "transaction.upsert",
+        });
+        const { id } = await prisma.transaction.upsert({
+          where: { id: messageId },
+          create: {
+            ...parsedMail,
+            ...exchanges,
+            title: sanitizedPlace,
+            from: cc,
+            purchaseDate: date,
+            categoryId: getCategoryFromPlace(sanitizedPlace),
+            owner: imapConfig.user,
+            id: messageId,
+          },
+          update: {},
+          select: { id: true },
+        });
+        perfLogUpsertTransaction();
+        if (sanitizedPlace !== place) console.log(`Sanitized place name: ${sanitizedPlace}, original: ${place}`);
+        console.log(`💳 New transaction "${id} - ${sanitizedPlace} : ${exchanges.currency}${exchanges.amount}" created!`);
       }
-    );
+    });
   });
 };
 
+let imap: Imap;
+
 const getEmails = () => {
   try {
-    const imap = new Imap(imapConfig);
+    imap = new Imap(imapConfig);
     imap.on("mail", (count: number) => {
       if (!firstFetchDone) {
         firstFetchDone = true;
@@ -179,20 +136,16 @@ const getEmails = () => {
             err,
           });
         boxCount = box.messages.total;
-        imap.search(
-          ["ALL", ["SINCE", startDate], FROM(Object.keys(BANK_LIST))],
-          (err, results) => {
-            if (err || !results || !results.length) return onEndFetch();
-            const fetcherInitialMails = imap.fetch(results, { bodies: "" });
-            attachFetchHandlers(fetcherInitialMails);
-          }
-        );
+        imap.search(["ALL", ["SINCE", startDate], FROM(Object.keys(BANK_LIST))], (err, results) => {
+          if (err || !results || !results.length) return onEndFetch();
+          const fetcherInitialMails = imap.fetch(results, { bodies: "" });
+          attachFetchHandlers(fetcherInitialMails);
+        });
       });
     });
 
     imap.once("error", (err) => {
-      if (err.code === "EPIPE" && err.source === "socket")
-        console.log("⚡️ Socket restarting...");
+      if (err.code === "EPIPE" && err.source === "socket") console.log("⚡️ Socket restarting...");
       else console.error("❌ imapOnce > error", { err });
       gracefullyRestartImap();
     });
@@ -239,17 +192,11 @@ const fillDefaultDbs = () => {
 };
 
 // =*=*=*=*=*=*= C O R S =*=*=*=*=*=*=
-app.use((req, res, next) => {
+app.use(function cors(req, res, next) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "OPTIONS, GET, POST, PATCH, DELETE"
-  );
+  res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PATCH, DELETE");
   res.setHeader("Access-Control-Max-Age", 2592000); // 30 days
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers"
-  );
+  res.setHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
   return next();
 });
 
@@ -257,28 +204,30 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // =*=*=*=*=*=*= R O U T E S =*=*=*=*=*=*=
-app.get("/", function (req, res) {
+app.get("/", async function (req, res) {
   if (!startDate || !prisma) res.status(500);
   res.send({
-    status:
-      res.statusCode < 500
-        ? "✅ Health check"
-        : { startDate: typeof startDate, prisma: typeof prisma },
+    status: res.statusCode < 500 ? "✅ Health check" : { startDate: typeof startDate, prisma: typeof prisma },
+  });
+});
+app.get("/imap", function (req, res) {
+  res.send({
+    imap: imap.state,
   });
 });
 app.options("/", function (req, res) {
   res.send({
+    "GET /imap": "Get imap status (disconnected, connected, authenticated)",
+    "GET /": "Get server (startDate, prisma) status",
     "GET /transaction": "All",
     "GET /starttime": "All",
     "GET /transaction/:id": "Get transaction",
-    "GET /transaction/title/:title":
-      "Get transaction by title, append '?strict=true' for only displaying exact title",
+    "GET /transaction/title/:title": "Get transaction by title, append '?strict=true' for only displaying exact title",
     "PATCH /transaction/:id": "Update transaction",
     "DELETE /transaction/:id": "Delete transaction",
     "POST /transaction": "New transaction",
     "GET /transaction/:from/:to": "Get transactions between two dates",
-    "GET /transaction/expenses/:from/:to":
-      "Get sum of transactions grouped by category for each month between two dates",
+    "GET /transaction/expenses/:from/:to": "Get sum of transactions grouped by category for each month between two dates",
     "GET /category": "All",
     "PATCH /category/:id": "Update category",
     "POST /category": "New category",
@@ -314,20 +263,14 @@ app.get("/transaction/title/:title", async function (req, res) {
   const perfLog = logSegmentPerf({ req });
   const transactions = await prisma.transaction.findMany({
     where: {
-      title: req.query.strict
-        ? req.params.title
-        : { contains: req.params.title },
+      title: req.query.strict ? req.params.title : { contains: req.params.title },
       ...((req.query.from || req.query.to) && {
         purchaseDate: {
           ...(req.query.from && {
-            gte: isValidDate(req.query.from)
-              ? new Date(req.query.from)
-              : new Date(),
+            gte: isValidDate(req.query.from) ? new Date(req.query.from) : new Date(),
           }),
           ...(req.query.to && {
-            lte: isValidDate(req.query.to)
-              ? new Date(req.query.to)
-              : new Date(),
+            lte: isValidDate(req.query.to) ? new Date(req.query.to) : new Date(),
           }),
         },
       }),
@@ -360,10 +303,8 @@ app.post("/transaction", async function (req, res) {
   const transaction = await prisma.transaction.create({
     data: {
       ...req.body,
-      purchaseDate: isValidDate(req.body.purchaseDate)
-        ? new Date(req.body.purchaseDate)
-        : new Date(),
-      id: uuid(),
+      purchaseDate: isValidDate(req.body.purchaseDate) ? new Date(req.body.purchaseDate) : new Date(),
+      id: randomUUID(),
     },
     include: { category: true },
   });
@@ -375,15 +316,11 @@ app.get("/transaction/:from/:to", async function (req, res) {
   const transactions = await prisma.transaction.findMany({
     where: {
       purchaseDate: {
-        gte: isValidDate(req.params.from)
-          ? new Date(req.params.from)
-          : new Date(),
+        gte: isValidDate(req.params.from) ? new Date(req.params.from) : new Date(),
         lte: isValidDate(req.params.to) ? new Date(req.params.to) : new Date(),
       },
       ...(req.query.title && {
-        title: req.query.strict
-          ? (req.query.title as string)
-          : { contains: req.query.title as string },
+        title: req.query.strict ? (req.query.title as string) : { contains: req.query.title as string },
       }),
     },
     ...transactionOptions,
@@ -392,18 +329,10 @@ app.get("/transaction/:from/:to", async function (req, res) {
   res.send(transactions);
 });
 app.get("/transaction/expenses/:from/:to", async function (req, res) {
-  if (
-    !isValidDate(req.params.from) ||
-    !isValidDate(req.params.to) ||
-    new Date(req.params.from) > new Date(req.params.to)
-  )
-    return res.send([]);
+  if (!isValidDate(req.params.from) || !isValidDate(req.params.to) || new Date(req.params.from) > new Date(req.params.to)) return res.send([]);
 
   const perfLogDateRange = logSegmentPerf({ req, segment: "get dateRange" });
-  const dateRange = getDateRange(
-    new Date(req.params.from),
-    new Date(req.params.to)
-  );
+  const dateRange = getDateRange(new Date(req.params.from), new Date(req.params.to));
   perfLogDateRange();
 
   const perfLogExpensesByMonth = logSegmentPerf({
@@ -471,6 +400,7 @@ app.post("/category", async function (req, res) {
   perfLog();
   getEmails();
 })();
-app.listen(process.env.PORT || 3000, () =>
-  console.log(`🚀 Server ready on ${process.env.PORT || 3000}`)
-);
+
+trace(app);
+
+app.listen(process.env.PORT || 3000, () => console.log(`🚀 Server ready on ${process.env.PORT || 3000}`));
