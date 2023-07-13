@@ -197,6 +197,7 @@ export const getCurrencyExchangeRates = async () => {
         headers: { apiKey: "krahLWkI5rACWplDnp6UdkPdZjYWi6Wk" },
       }
     );
+    if ((response as Response).status !== 200) throw new Error('Throw in call to exchangerates')
     response = await response.json();
     currencyRates = response;
   } catch (e) {
