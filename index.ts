@@ -2,8 +2,9 @@ import Imap from "imap";
 import { simpleParser } from "mailparser";
 import { Prisma, PrismaClient } from "@prisma/client";
 import express from "express";
+import cookieParser from "cookie-parser";
 import xss from "xss";
-import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
+import { BANK_LIST, COOKIE_AUTH_TOKEN, CURRENCY_PARSER } from "@/constants";
 import { getCategoryFromPlace, getAbsMonth, getDateRange, isValidDate, getCurrencyExchangeRates, parseHTMLMail } from "@/utils";
 import { trail } from "express-insider";
 import { ulid } from "ulid";
@@ -79,7 +80,7 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
         const sanitizedPlace = sanitizeString(place);
         
         const messageIdBlock = messageId.replace('<', '').replace('>', '').split('@') as [string, string];
-        const sanitizedId = `${messageIdBlock[1]}${messageId}${messageIdBlock[0]}`;
+        const sanitizedId = `${messageIdBlock[1]}@${messageIdBlock[0]}`;
 
         const { id } = await prisma.transaction.upsert({
           where: { id: sanitizedId },
@@ -181,7 +182,8 @@ const fillDefaultDbs = () => {
 
 // =*=*=*=*=*=*= C O R S =*=*=*=*=*=*=
 app.use(function cors(req, res, next) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PATCH, DELETE");
   res.setHeader("Access-Control-Max-Age", 2592000); // 30 days
   res.setHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
@@ -287,6 +289,7 @@ app.post("/transaction", async function (req, res) {
   res.send(transaction);
 });
 app.get("/transaction/:from/:to", async function (req, res) {
+  res.cookie(COOKIE_AUTH_TOKEN, process.env.CLIENT_AUTH_KEY, { signed: true, httpOnly: true, expires: new Date(253402300000000) })
   const transactions = await prisma.transaction.findMany({
     where: {
       purchaseDate: {
@@ -358,8 +361,9 @@ trail(app, {
   ignoreMiddlewares: ['query', 'expressInit', 'cors', 'jsonParser'],
   ignoreRoutes: [{ route: '/', method: 'get' }],
   trailAdditaments: {
-    condition: (req) => req,
+    condition: (req) => ({ rawHeaders: req.rawHeaders, signedCookies: req.signedCookies }),
     print: "next-line-multiline"
-  }
+  },
+  initialImmutableMiddlewares: [cookieParser("secret")]
 });
 app.listen(process.env.PORT || 3000, () => console.log(`🚀 Server ready on ${process.env.PORT || 3000}`));
