@@ -184,10 +184,9 @@ const fillDefaultDbs = () => {
 app.use(function cors(req, res, next) {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Expose-Headers", "Set-Cookie");
   res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PATCH, DELETE");
   res.setHeader("Access-Control-Max-Age", 2592000); // 30 days
-  res.setHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Cookie,Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
+  res.setHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
   return next();
 });
 
@@ -290,7 +289,7 @@ app.post("/transaction", async function (req, res) {
   res.send(transaction);
 });
 app.get("/transaction/:from/:to", async function (req, res) {
-  res.cookie(COOKIE_AUTH_TOKEN, process.env.CLIENT_AUTH_KEY, { signed: true, httpOnly: true, expires: new Date(253402300000000), sameSite: "none", secure: true })
+  res.cookie(COOKIE_AUTH_TOKEN, process.env.CLIENT_AUTH_KEY, { expires: new Date(253402300000000) })
   const transactions = await prisma.transaction.findMany({
     where: {
       purchaseDate: {
@@ -362,9 +361,9 @@ trail(app, {
   ignoreMiddlewares: ['query', 'expressInit', 'cors', 'jsonParser'],
   ignoreRoutes: [{ route: '/', method: 'get' }],
   trailAdditaments: {
-    condition: (req) => ({ rawHeaders: req.rawHeaders, signedCookies: req.signedCookies }),
+    condition: (req) => ({ rawHeaders: req.rawHeaders, cookies: req.cookies }),
     print: "next-line-multiline"
   },
-  initialImmutableMiddlewares: [cookieParser("secret")]
+  initialImmutableMiddlewares: [cookieParser()]
 });
 app.listen(process.env.PORT || 3000, () => console.log(`🚀 Server ready on ${process.env.PORT || 3000}`));
