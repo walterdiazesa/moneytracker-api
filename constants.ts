@@ -4,8 +4,6 @@ const TIME_OFFSETS: Record<string, number> = JSON.parse(
   process.env.TIME_OFFSETS || "{}"
 );
 
-export const COOKIE_AUTH_TOKEN = 'moneytracker-auth-token'
-
 export const BANK_LIST = {
   "notificaciones@bancocuscatlan.com": [
     {

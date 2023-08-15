@@ -2,9 +2,8 @@ import Imap from "imap";
 import { simpleParser } from "mailparser";
 import { Prisma, PrismaClient } from "@prisma/client";
 import express from "express";
-import cookieParser from "cookie-parser";
 import xss from "xss";
-import { BANK_LIST, COOKIE_AUTH_TOKEN, CURRENCY_PARSER } from "@/constants";
+import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
 import { getCategoryFromPlace, getAbsMonth, getDateRange, isValidDate, getCurrencyExchangeRates, parseHTMLMail } from "@/utils";
 import { trail } from "express-insider";
 import { ulid } from "ulid";
@@ -289,7 +288,6 @@ app.post("/transaction", async function (req, res) {
   res.send(transaction);
 });
 app.get("/transaction/:from/:to", async function (req, res) {
-  res.cookie(COOKIE_AUTH_TOKEN, process.env.CLIENT_AUTH_KEY, { expires: new Date(253402300000000) })
   const transactions = await prisma.transaction.findMany({
     where: {
       purchaseDate: {
@@ -361,9 +359,8 @@ trail(app, {
   ignoreMiddlewares: ['query', 'expressInit', 'cors', 'jsonParser'],
   ignoreRoutes: [{ route: '/', method: 'get' }],
   trailAdditaments: {
-    condition: (req) => ({ rawHeaders: req.rawHeaders, cookies: req.cookies }),
+    condition: (req) => req.rawHeaders,
     print: "next-line-multiline"
-  },
-  initialImmutableMiddlewares: [cookieParser()]
+  }
 });
 app.listen(process.env.PORT || 3000, () => console.log(`🚀 Server ready on ${process.env.PORT || 3000}`));
