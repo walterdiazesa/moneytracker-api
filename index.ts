@@ -1,12 +1,13 @@
 import Imap from "imap";
 import { simpleParser } from "mailparser";
 import { Prisma, PrismaClient } from "@prisma/client";
-import express, { Request, Express, Response, NextFunction } from "express";
-import { randomUUID } from "crypto";
+import express from "express";
 import xss from "xss";
 import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
 import { getCategoryFromPlace, getAbsMonth, getDateRange, isValidDate, getCurrencyExchangeRates, parseHTMLMail } from "@/utils";
-import { trace } from "./trace";
+import { trail } from "express-insider";
+import { ulid } from "ulid";
+import fs from 'fs';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -42,20 +43,10 @@ export const FROM = (from: string | string[]) => {
   return nestedFromOr;
 };
 
-const logSegmentPerf = ({ req: { query, params, method, route: { path } } = { route: {} } as Request, segment }: { req?: Request; segment?: string }) => {
-  const structuredSegment = segment ? `${segment} ${randomUUID().split("-")[0]}` : randomUUID().split("-")[0];
-  console.log(`⚡️ Start ${structuredSegment}${!method ? "" : ` (${method} ${path})`}, calledWith: ${JSON.stringify({ query, params }, null, 2)}`);
-  const init = performance.now();
-  return (bundle?: object) => console.log(`⚡️ End ${structuredSegment}${!method ? "" : ` (${method} ${path})`}, elapsed: ${performance.now() - init} ms${!bundle ? "" : `, bundle: ${Buffer.byteLength(JSON.stringify(bundle))} bytes`}`);
-};
-
 const onEndFetch = () => {
   console.log(`Done fetching messages!`);
   startDate = new Date();
-  const perfLog = logSegmentPerf({ segment: "startTime.update" });
-  prisma.startTime.update({ where: { id: 1 }, data: { value: startDate } }).then(() => {
-    perfLog();
-  });
+  prisma.startTime.update({ where: { id: 1 }, data: { value: startDate } }).then(() => {});
 };
 
 const attachFetchHandlers = (fetcher: Imap.ImapFetch) => {
@@ -77,9 +68,7 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
 
       // Founded transaction mail
       if (query) {
-        const perfLogParseMail = logSegmentPerf({ segment: "parseHTMLMail" });
         const { currency, amount, cc, date, place, ...parsedMail } = parseHTMLMail(html, query);
-        perfLogParseMail();
         const exchanges = { currency, amount };
         if (currency !== CURRENCY_PARSER.$) {
           const exchangedAmount = amount / +(await getCurrencyExchangeRates())[currency];
@@ -89,11 +78,12 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
           exchanges["amount"] = exchangedAmount;
         }
         const sanitizedPlace = sanitizeString(place);
-        const perfLogUpsertTransaction = logSegmentPerf({
-          segment: "transaction.upsert",
-        });
+        
+        const messageIdBlock = messageId.replace('<', '').replace('>', '').split('@') as [string, string];
+        const sanitizedId = `${messageIdBlock[1]}${messageId}${messageIdBlock[0]}`;
+
         const { id } = await prisma.transaction.upsert({
-          where: { id: messageId },
+          where: { id: sanitizedId },
           create: {
             ...parsedMail,
             ...exchanges,
@@ -102,12 +92,11 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
             purchaseDate: date,
             categoryId: getCategoryFromPlace(sanitizedPlace),
             owner: imapConfig.user,
-            id: messageId,
+            id: sanitizedId,
           },
           update: {},
           select: { id: true },
         });
-        perfLogUpsertTransaction();
         if (sanitizedPlace !== place) console.log(`Sanitized place name: ${sanitizedPlace}, original: ${place}`);
         console.log(`💳 New transaction "${id} - ${sanitizedPlace} : ${exchanges.currency}${exchanges.amount}" created!`);
       }
@@ -239,28 +228,21 @@ const transactionOptions: Prisma.TransactionFindManyArgs = {
   orderBy: { purchaseDate: "desc" },
 };
 app.get("/transaction", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
   const transactions = await prisma.transaction.findMany(transactionOptions);
-  perfLog(transactions);
   res.send(transactions);
 });
 app.get("/starttime", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
   const starttime = await prisma.startTime.findMany();
-  perfLog(starttime);
   res.send(starttime);
 });
 app.get("/transaction/:id", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
   const transaction = await prisma.transaction.findUnique({
     where: { id: req.params.id },
     include: { category: true },
   });
-  perfLog(transaction);
   res.send(transaction);
 });
 app.get("/transaction/title/:title", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
   const transactions = await prisma.transaction.findMany({
     where: {
       title: req.query.strict ? req.params.title : { contains: req.params.title },
@@ -277,42 +259,35 @@ app.get("/transaction/title/:title", async function (req, res) {
     },
     ...transactionOptions,
   });
-  perfLog(transactions);
   res.send(transactions);
 });
 app.patch("/transaction/:id", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
   const transaction = await prisma.transaction.update({
     where: { id: req.params.id },
     data: req.body,
     include: { category: true },
   });
-  perfLog(transaction);
   res.send(transaction);
 });
 app.delete("/transaction/:id", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
   const transaction = await prisma.transaction.delete({
     where: { id: req.params.id },
   });
-  perfLog(transaction);
   res.send(transaction);
 });
 app.post("/transaction", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
+  const purchaseDate = isValidDate(req.body.purchaseDate) ? new Date(req.body.purchaseDate) : new Date()
   const transaction = await prisma.transaction.create({
     data: {
       ...req.body,
-      purchaseDate: isValidDate(req.body.purchaseDate) ? new Date(req.body.purchaseDate) : new Date(),
-      id: randomUUID(),
+      purchaseDate,
+      id: ulid(purchaseDate.getTime()),
     },
     include: { category: true },
   });
-  perfLog(transaction);
   res.send(transaction);
 });
 app.get("/transaction/:from/:to", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
   const transactions = await prisma.transaction.findMany({
     where: {
       purchaseDate: {
@@ -325,20 +300,13 @@ app.get("/transaction/:from/:to", async function (req, res) {
     },
     ...transactionOptions,
   });
-  perfLog(transactions);
   res.send(transactions);
 });
 app.get("/transaction/expenses/:from/:to", async function (req, res) {
   if (!isValidDate(req.params.from) || !isValidDate(req.params.to) || new Date(req.params.from) > new Date(req.params.to)) return res.send([]);
 
-  const perfLogDateRange = logSegmentPerf({ req, segment: "get dateRange" });
   const dateRange = getDateRange(new Date(req.params.from), new Date(req.params.to));
-  perfLogDateRange();
 
-  const perfLogExpensesByMonth = logSegmentPerf({
-    req,
-    segment: "get expensesByMonth",
-  });
   const expensesByMonth = await prisma.$transaction(
     dateRange.map((date) =>
       prisma.transaction.groupBy({
@@ -356,51 +324,36 @@ app.get("/transaction/expenses/:from/:to", async function (req, res) {
       })
     )
   );
-  perfLogExpensesByMonth(expensesByMonth);
 
-  const perfLogReducer = logSegmentPerf({
-    req,
-    segment: "reduce expensesByMonth",
-  });
   const transactions = expensesByMonth.reduce((acc, cVal, idx) => {
     acc[getAbsMonth(dateRange[idx], "begin").toJSON()] = cVal;
     return acc;
   }, {});
-  perfLogReducer();
 
   res.send(transactions);
 });
 app.get("/category", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
   const category = await prisma.category.findMany();
-  perfLog(category);
   res.send(category);
 });
 app.patch("/category/:id", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
   const category = await prisma.category.update({
     where: { id: Number(req.params.id) },
     data: req.body,
   });
-  perfLog(category);
   res.send(category);
 });
 app.post("/category", async function (req, res) {
-  const perfLog = logSegmentPerf({ req });
   const categories = await prisma.category.create({
     data: req.body,
   });
-  perfLog(categories);
   res.send(categories);
 });
 
 (async () => {
-  const perfLog = logSegmentPerf({ segment: "startTime.findUnique" });
   startDate = (await prisma.startTime.findUnique({ where: { id: 1 } })).value;
-  perfLog();
   getEmails();
 })();
 
-trace(app);
-
+trail(app);
 app.listen(process.env.PORT || 3000, () => console.log(`🚀 Server ready on ${process.env.PORT || 3000}`));
