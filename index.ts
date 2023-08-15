@@ -289,7 +289,7 @@ app.post("/transaction", async function (req, res) {
   res.send(transaction);
 });
 app.get("/transaction/:from/:to", async function (req, res) {
-  res.cookie(COOKIE_AUTH_TOKEN, process.env.CLIENT_AUTH_KEY, { signed: true, httpOnly: true, expires: new Date(253402300000000), sameSite: "none" })
+  res.cookie(COOKIE_AUTH_TOKEN, process.env.CLIENT_AUTH_KEY, { signed: true, httpOnly: true, expires: new Date(253402300000000), sameSite: "none", secure: true })
   const transactions = await prisma.transaction.findMany({
     where: {
       purchaseDate: {
