@@ -7,7 +7,6 @@ import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
 import { getCategoryFromPlace, getAbsMonth, getDateRange, isValidDate, getCurrencyExchangeRates, parseHTMLMail } from "@/utils";
 import { trail } from "express-insider";
 import { ulid } from "ulid";
-import fs from 'fs';
 
 const prisma = new PrismaClient();
 const app = express();
