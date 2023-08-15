@@ -355,5 +355,12 @@ app.post("/category", async function (req, res) {
   getEmails();
 })();
 
-trail(app);
+trail(app, {
+  ignoreMiddlewares: ['query', 'expressInit', 'cors', 'jsonParser'],
+  ignoreRoutes: [{ route: '/', method: 'get' }],
+  trailAdditaments: {
+    condition: (req) => req,
+    print: "next-line-multiline"
+  }
+});
 app.listen(process.env.PORT || 3000, () => console.log(`🚀 Server ready on ${process.env.PORT || 3000}`));
