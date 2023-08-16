@@ -8,7 +8,6 @@ import { getCategoryFromPlace, getAbsMonth, getDateRange, isValidDate, getCurren
 import { trail } from "express-insider";
 import { ulid } from "ulid";
 import { decode, getToken } from "next-auth/jwt";
-import cookieParser from "cookie-parser";
 
 const prisma = new PrismaClient();
 const app = express();
@@ -187,7 +186,7 @@ app.use(function cors(req, res, next) {
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PATCH, DELETE");
   res.setHeader("Access-Control-Max-Age", 2592000); // 30 days
-  res.setHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
+  res.setHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Authorization,Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
   return next();
 });
 
@@ -369,19 +368,15 @@ app.post("/category", async function (req, res) {
 
 (async () => {
   startDate = (await prisma.startTime.findUnique({ where: { id: 1 } })).value;
-  // getEmails();
+  getEmails();
 })();
 
 trail(app, {
   ignoreMiddlewares: ["query", "expressInit", "cors", "jsonParser"],
   ignoreRoutes: [{ route: "/", method: "get" }],
   trailAdditaments: {
-    condition: (req) => {
-      const { cookie, ...headers } = req.headers;
-      return { headers, cookies: req.cookies, signedCookies: req.signedCookies };
-    },
+    condition: (req) => req.headers,
     print: "next-line-multiline",
   },
-  initialImmutableMiddlewares: [cookieParser("secret")],
 });
 app.listen(process.env.PORT || 3000, () => console.log(`🚀 Server ready on ${process.env.PORT || 3000}`));
