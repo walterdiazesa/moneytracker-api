@@ -7,6 +7,8 @@ import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
 import { getCategoryFromPlace, getAbsMonth, getDateRange, isValidDate, getCurrencyExchangeRates, parseHTMLMail } from "@/utils";
 import { trail } from "express-insider";
 import { ulid } from "ulid";
+import { decode } from "next-auth/jwt";
+import cookieParser from "cookie-parser";
 
 const prisma = new PrismaClient();
 const app = express();
@@ -192,6 +194,20 @@ app.use(function cors(req, res, next) {
 // =*=*=*=*=*=*= UTILS =*=*=*=*=*=*=
 app.use(express.json());
 
+// =*=*=*=*=*=*= A U T H =*=*=*=*=*=*=
+app.use(async function auth(req, res, next) {
+  if (!["GET", "OPTIONS", "HEAD"].includes(req.method.toUpperCase())) {
+    try {
+      const jwt = await decode({ token: req.cookies['next-auth.session-token'], secret: process.env.NEXTAUTH_SECRET });
+      // With a valid JWT it would be enough, but an extra redundant condition wouldn't be bad
+      if (!JSON.parse(process.env.AUTH_WHITE_LIST).includes(jwt.email)) return res.status(403).send({ error: 'Only whitelisted users have write permissions.' })
+    } catch {
+      return res.status(401).send({ error: 'Only whitelisted users have write permissions.' })
+    }
+  }
+  return next();
+})
+
 // =*=*=*=*=*=*= R O U T E S =*=*=*=*=*=*=
 app.get("/", async function (req, res) {
   if (!startDate || !prisma) res.status(500);
@@ -352,15 +368,19 @@ app.post("/category", async function (req, res) {
 
 (async () => {
   startDate = (await prisma.startTime.findUnique({ where: { id: 1 } })).value;
-  getEmails();
+  // getEmails();
 })();
 
 trail(app, {
   ignoreMiddlewares: ['query', 'expressInit', 'cors', 'jsonParser'],
   ignoreRoutes: [{ route: '/', method: 'get' }],
   trailAdditaments: {
-    condition: (req) => req.rawHeaders,
+    condition: (req) => {
+      const { cookie, ...headers } = req.headers;
+      return { headers, cokies: req.cookies };
+    },
     print: "next-line-multiline"
-  }
+  },
+  initialImmutableMiddlewares: [cookieParser()]
 });
 app.listen(process.env.PORT || 3000, () => console.log(`🚀 Server ready on ${process.env.PORT || 3000}`));
