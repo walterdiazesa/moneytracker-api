@@ -7,7 +7,7 @@ import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
 import { getCategoryFromPlace, getAbsMonth, getDateRange, isValidDate, getCurrencyExchangeRates, parseHTMLMail } from "@/utils";
 import { trail } from "express-insider";
 import { ulid } from "ulid";
-import { decode } from "next-auth/jwt";
+import { decode, getToken } from "next-auth/jwt";
 import cookieParser from "cookie-parser";
 
 const prisma = new PrismaClient();
@@ -79,8 +79,8 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
           exchanges["amount"] = exchangedAmount;
         }
         const sanitizedPlace = sanitizeString(place);
-        
-        const messageIdBlock = messageId.replace('<', '').replace('>', '').split('@') as [string, string];
+
+        const messageIdBlock = messageId.replace("<", "").replace(">", "").split("@") as [string, string];
         const sanitizedId = `${messageIdBlock[1]}@${messageIdBlock[0]}`;
 
         const { id } = await prisma.transaction.upsert({
@@ -198,15 +198,16 @@ app.use(express.json());
 app.use(async function auth(req, res, next) {
   if (!["GET", "OPTIONS", "HEAD"].includes(req.method.toUpperCase())) {
     try {
-      const jwt = await decode({ token: req.cookies['next-auth.session-token'], secret: process.env.NEXTAUTH_SECRET });
+      //const jwt = await decode({ token: req.cookies['next-auth.session-token'], secret: process.env.NEXTAUTH_SECRET });
+      const jwt = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
       // With a valid JWT it would be enough, but an extra redundant condition wouldn't be bad
-      if (!JSON.parse(process.env.AUTH_WHITE_LIST).includes(jwt.email)) return res.status(403).send({ error: 'Only whitelisted users have write permissions.' })
+      if (!JSON.parse(process.env.AUTH_WHITE_LIST).includes(jwt.email)) return res.status(403).send({ error: "Only whitelisted users have write permissions." });
     } catch {
-      return res.status(401).send({ error: 'Only whitelisted users have write permissions.' })
+      return res.status(401).send({ error: "Only whitelisted users have write permissions." });
     }
   }
   return next();
-})
+});
 
 // =*=*=*=*=*=*= R O U T E S =*=*=*=*=*=*=
 app.get("/", async function (req, res) {
@@ -292,7 +293,7 @@ app.delete("/transaction/:id", async function (req, res) {
   res.send(transaction);
 });
 app.post("/transaction", async function (req, res) {
-  const purchaseDate = isValidDate(req.body.purchaseDate) ? new Date(req.body.purchaseDate) : new Date()
+  const purchaseDate = isValidDate(req.body.purchaseDate) ? new Date(req.body.purchaseDate) : new Date();
   const transaction = await prisma.transaction.create({
     data: {
       ...req.body,
@@ -372,15 +373,15 @@ app.post("/category", async function (req, res) {
 })();
 
 trail(app, {
-  ignoreMiddlewares: ['query', 'expressInit', 'cors', 'jsonParser'],
-  ignoreRoutes: [{ route: '/', method: 'get' }],
+  ignoreMiddlewares: ["query", "expressInit", "cors", "jsonParser"],
+  ignoreRoutes: [{ route: "/", method: "get" }],
   trailAdditaments: {
     condition: (req) => {
       const { cookie, ...headers } = req.headers;
-      return { headers, cokies: req.cookies };
+      return { headers, cookies: req.cookies, signedCookies: req.signedCookies };
     },
-    print: "next-line-multiline"
+    print: "next-line-multiline",
   },
-  initialImmutableMiddlewares: [cookieParser()]
+  initialImmutableMiddlewares: [cookieParser("secret")],
 });
 app.listen(process.env.PORT || 3000, () => console.log(`🚀 Server ready on ${process.env.PORT || 3000}`));
