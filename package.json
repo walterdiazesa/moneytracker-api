@@ -1,7 +1,7 @@
 {
   "name": "moneytracker",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend for MoneyTracker",
   "main": "index.js",
   "type": "module",
   "engines": {
@@ -13,8 +13,8 @@
     "start": "tsx index.ts"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "walterdiazesa",
+  "license": "MIT",
   "dependencies": {
     "@prisma/client": "4.14.0",
     "dotenv": "16.0.3",
