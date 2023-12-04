@@ -2,8 +2,7 @@ export const isValidDate = (date: any): date is Date =>
   // @ts-ignore
   new Date(date) !== "Invalid Date" && !isNaN(new Date(date));
 
-export const getDateWithOffset = (date: Date, offset = 0) =>
-  new Date(date.setHours(date.getHours() + offset));
+export const getDateWithOffset = (date: Date, offset = 0) => new Date(date.setHours(date.getHours() + offset));
 
 export const getDateRange = (fromDate: Date, toDate: Date) => {
   const fromYear = fromDate.getFullYear();
@@ -28,30 +27,16 @@ export const getAbsMonth = (date: Date, type: "begin" | "end") => {
   if (!type) return date;
   switch (type) {
     case "begin":
-      return new Date(
-        Date.UTC(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0)
-      );
+      return new Date(Date.UTC(date.getFullYear(), date.getMonth(), 1, 0 + (process.env.UTC_OFFSET ? +process.env.UTC_OFFSET : 0), 0, 0, 0));
     case "end":
-      return new Date(
-        Date.UTC(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999)
-      );
+      return new Date(Date.UTC(date.getFullYear(), date.getMonth() + 1, 0, 23 + (process.env.UTC_OFFSET ? +process.env.UTC_OFFSET : 0), 59, 59, 999));
   }
 };
 
 export const getAbsDate = (date: Date) => {
   const initDate = new Date(date);
-  let dateHelper = new Date(
-    initDate.getFullYear(),
-    initDate.getMonth(),
-    initDate.getDate(),
-    0,
-    0,
-    0,
-    0
-  );
-  return new Date(
-    dateHelper.getTime() - dateHelper.getTimezoneOffset() * 60000
-  );
+  let dateHelper = new Date(initDate.getFullYear(), initDate.getMonth(), initDate.getDate(), 0, 0, 0, 0);
+  return new Date(dateHelper.getTime() - dateHelper.getTimezoneOffset() * 60000);
 };
 
 export const getDaysDiff = (dateA: Date, dateB: Date) => {
