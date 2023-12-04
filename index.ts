@@ -378,5 +378,6 @@ trail(app, {
     condition: (req) => req.headers,
     print: "next-line-multiline",
   },
+  showRequestedURL: true,
 });
 app.listen(process.env.PORT || 3000, () => console.log(`🚀 Server ready on ${process.env.PORT || 3000}`));
