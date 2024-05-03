@@ -1,15 +1,12 @@
 import * as dotenv from "dotenv";
 dotenv.config();
-const TIME_OFFSETS: Record<string, number> = JSON.parse(
-  process.env.TIME_OFFSETS || "{}"
-);
+const TIME_OFFSETS: Record<string, number> = JSON.parse(process.env.TIME_OFFSETS || "{}");
 
 export const BANK_LIST = {
   "notificaciones@bancocuscatlan.com": [
     {
       subject: "Compra con Tarjeta de Credito Titular",
-      parseStart:
-        "Se ha realizado una compra con su tarjeta titular de Banco CUSCATLAN XXXXXXXXXX",
+      parseStart: "Se ha realizado una compra con su tarjeta titular de Banco CUSCATLAN XXXXXXXXXX",
       parseEnd: ". Consultas al ",
       parser: "parseStrip",
       offset: TIME_OFFSETS["cuscatlan"],
@@ -20,10 +17,7 @@ export const BANK_LIST = {
       subject: "Alerta PRF BAC Credomatic",
       parseStart: "Inicio 3 iconos  ajustables",
       parseEnd: "Fin 3 cubos ajustables",
-      stripCard: [
-        "Se acaba de realizar una compra con tu tarjeta",
-        "</strong>\n",
-      ],
+      stripCard: ["Se acaba de realizar una compra con tu tarjeta", "</strong>\n"],
       segmentRow: '<tr bgcolor="#F2F2F2">',
       segmentRowAlt: '<tr bgcolor="#F2F2F2">',
       parser: "sections",
@@ -34,14 +28,8 @@ export const BANK_LIST = {
     {
       subject: "Wire Successful (Beneficiary Copy) - CEO Portal Wires Alert",
       stripCard: "3034",
-      dateSlice: [
-        '<td class="timelabel">Date/Time Stamp:</td><td class="interiorvalue"><span class="bold">',
-        " PT</span></td>",
-      ],
-      amountSlice: [
-        '<td class="interiorlabel">Amount: </td><td class="interiorvalue"><span class="bold">',
-        "&nbsp;USD</span></td>",
-      ],
+      dateSlice: ['<td class="timelabel">Date/Time Stamp:</td><td class="interiorvalue"><span class="bold">', " PT</span></td>"],
+      amountSlice: ['<td class="interiorlabel">Amount: </td><td class="interiorvalue"><span class="bold">', "&nbsp;USD</span></td>"],
       placeSlice: "Baires",
       parser: "segments",
       type: "plus",
@@ -76,10 +64,21 @@ export const PLACE_REGEX_TO_CAT = {
   airbnb: CATEGORIES["🏠 Hospedaje"],
   mcdonald: CATEGORIES["🍣 Restaurante"],
   kfc: CATEGORIES["🍣 Restaurante"],
+  selectos: CATEGORIES["🥖 Alimentos"],
+  starbucks: CATEGORIES["🍣 Restaurante"],
+  walmart: CATEGORIES["🥖 Alimentos"],
+  "pizza hut": CATEGORIES["🍣 Restaurante"],
+  megapaca: CATEGORIES["🛍 Ropa"],
+  "ban ban": CATEGORIES["🍣 Restaurante"],
 } as const;
 
 export const PLACE_TO_CAT = {
   Baires: CATEGORIES["💸 Income"],
+  "LOS CEBOLLINES": CATEGORIES["🍣 Restaurante"],
+  "RESTAURANTE BASILICO": CATEGORIES["🍣 Restaurante"],
+  "POLLO CAMPESTRE": CATEGORIES["🍣 Restaurante"],
+  "POLLO CAMPERO": CATEGORIES["🍣 Restaurante"],
+  "CAFE FULANOS": CATEGORIES["🍣 Restaurante"],
   "DIGICEL DING*75373953": CATEGORIES["🃏 Miscelánea"],
   "WALMART CONSTITUCION": CATEGORIES["🥖 Alimentos"],
   "LA PAMPA EST.1987 Z.RO": CATEGORIES["🍣 Restaurante"],
@@ -209,8 +208,7 @@ export const PLACE_TO_CAT = {
   "ETRAVELI.Flightmytrip_": CATEGORIES["🃏 Miscelánea"],
   "AIRBNB * HMMBHM3Y3D": CATEGORIES["🏠 Hospedaje"],
   "VITTORIA SAS DI ALESS.": CATEGORIES["🃏 Miscelánea"],
-  "UBER <span>&nbsp;</span><span>&nbsp;</span>*TRIP":
-    CATEGORIES["🚈 Transporte"],
+  "UBER <span>&nbsp;</span><span>&nbsp;</span>*TRIP": CATEGORIES["🚈 Transporte"],
   "UBER *TRIP": CATEGORIES["🚈 Transporte"],
   "RELAY PARTENZE": CATEGORIES["🃏 Miscelánea"],
   "RELAY MOLO A": CATEGORIES["🃏 Miscelánea"],
