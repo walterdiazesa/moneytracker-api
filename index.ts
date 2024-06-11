@@ -109,21 +109,13 @@ let imap: Imap;
 const getEmails = () => {
   try {
     imap = new Imap(imapConfig);
-    imap.on("mail", (count: number) => {
-      if (!firstFetchDone) {
-        firstFetchDone = true;
-        return;
-      }
-      boxCount += count;
-      const fetcherNewMails = imap.seq.fetch(`${boxCount}:*`, { bodies: "" });
-      attachFetchHandlers(fetcherNewMails);
-    });
+
     imap.once("ready", () => {
       imap.openBox("INBOX", false, (err, box) => {
-        if (err)
-          return console.error("getEmails > imapOnceReady > imapOpenBoxInbox", {
-            err,
-          });
+        if (err) {
+          console.error("❌ getEmails > imapOnceReady > imapOpenBoxInbox", { err });
+          return gracefullyRestartImap();
+        }
         boxCount = box.messages.total;
         imap.search(["ALL", ["SINCE", startDate], FROM(Object.keys(BANK_LIST))], (err, results) => {
           if (err || !results || !results.length) return onEndFetch();
@@ -131,6 +123,16 @@ const getEmails = () => {
           attachFetchHandlers(fetcherInitialMails);
         });
       });
+    });
+
+    imap.on("mail", (count) => {
+      if (!firstFetchDone) {
+        firstFetchDone = true;
+        return;
+      }
+      boxCount += count;
+      const fetcherNewMails = imap.seq.fetch(`${boxCount}:*`, { bodies: "" });
+      attachFetchHandlers(fetcherNewMails);
     });
 
     imap.once("error", (err) => {
@@ -142,7 +144,6 @@ const getEmails = () => {
     imap.once("end", () => {
       console.log("❌ Connection ended");
       gracefullyRestartImap();
-      // imap.connect();
     });
 
     imap.connect();
@@ -325,6 +326,7 @@ app.get("/transaction/expenses/:from/:to", async function (req, res) {
 
   const expensesByMonth = await prisma.$transaction(
     dateRange.map((date) =>
+      // @ts-ignore
       prisma.transaction.groupBy({
         by: ["categoryId"],
         where: {
