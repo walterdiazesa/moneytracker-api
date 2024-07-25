@@ -69,11 +69,11 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
       // Founded transaction mail
       if (query) {
         const { currency, amount, cc, date, place, ...parsedMail } = parseHTMLMail(html, query);
-        const exchanges = { currency, amount };
+        const exchanges = { currency, amount: +amount.replace(/[^0-9.]/g, "") };
         if (currency !== CURRENCY_PARSER.$) {
           const exchangedAmount = amount / +(await getCurrencyExchangeRates())[currency];
           exchanges["orCurrency"] = currency;
-          exchanges["orAmount"] = +amount;
+          exchanges["orAmount"] = amount;
           exchanges["currency"] = CURRENCY_PARSER.$;
           exchanges["amount"] = exchangedAmount;
         }
