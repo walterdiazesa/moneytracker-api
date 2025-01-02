@@ -1,13 +1,13 @@
-import Imap from "imap";
-import { simpleParser } from "mailparser";
+import { BANK_LIST, CATEGORIES, CURRENCY_PARSER } from "@/constants";
+import { getAbsMonth, getCategoryFromPlace, getCurrencyExchangeRates, getDateRange, isValidDate, parseHTMLMail } from "@/utils";
 import { Prisma, PrismaClient } from "@prisma/client";
 import express from "express";
-import xss from "xss";
-import { BANK_LIST, CATEGORIES, CURRENCY_PARSER } from "@/constants";
-import { getCategoryFromPlace, getAbsMonth, getDateRange, isValidDate, getCurrencyExchangeRates, parseHTMLMail } from "@/utils";
 import { trail } from "express-insider";
+import Imap from "imap";
+import { simpleParser } from "mailparser";
+import { getToken } from "next-auth/jwt";
 import { ulid } from "ulid";
-import { decode, getToken } from "next-auth/jwt";
+import xss from "xss";
 
 const prisma = new PrismaClient();
 const app = express();
@@ -68,6 +68,8 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
 
       // Founded transaction mail
       if (query) {
+        const isTransfer365 = query.parser === "transfer365-send";
+        if (isTransfer365 && !html.toLowerCase().includes("monto")) return;
         const { currency, amount, cc, date, place, from: fromBank, to: toBank, ...parsedMail } = parseHTMLMail(html, query);
         const exchanges = { currency, amount: +amount.replace(/[^0-9.]/g, "") };
         if (currency !== CURRENCY_PARSER.$) {
@@ -78,7 +80,6 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
           exchanges["amount"] = exchangedAmount;
         }
 
-        const isTransfer365 = query.parser === "transfer365-send";
         const sanitizedPlace = isTransfer365 ? `TRANSFER365: ${fromBank} -> ${toBank}` : sanitizeString(place);
 
         const messageIdBlock = messageId.replace("<", "").replace(">", "").split("@") as [string, string];
@@ -90,7 +91,7 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
             ...parsedMail,
             ...exchanges,
             title: sanitizedPlace,
-            from: cc,
+            from: isTransfer365 ? "CASH" : cc,
             purchaseDate: isTransfer365 ? mailReceivedAt : date,
             categoryId: isTransfer365 ? CATEGORIES["🃏 Miscelánea"] : getCategoryFromPlace(sanitizedPlace),
             owner: imapConfig.user,

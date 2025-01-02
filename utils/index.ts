@@ -1,5 +1,5 @@
 import { BANK_LIST } from "@/constants";
-import { parseStrip, segments, sections, parseTransfer365 } from "./parsers";
+import { parseStrip, parseTransfer365, sections, segments } from "./parsers";
 
 const PARSER_PARSER = {
   parseStrip,

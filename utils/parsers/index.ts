@@ -4,8 +4,8 @@ import { getDateWithOffset } from "@/utils";
 type Query<T extends keyof typeof BANK_LIST> = (typeof BANK_LIST)[T][number];
 
 export const parseTransfer365 = (html: string) => {
-  const isAgricola = html.includes("=B3n destino");
-  const i = isAgricola ? html.indexOf("=B3n destino") : html.indexOf("Banco Destino");
+  const isAgricola = html.includes("Institución destino");
+  const i = isAgricola ? html.indexOf("Institución destino") : html.indexOf("Banco Destino"); // =B3n destino
   const v = html.slice(i).split(/<\/b>|<br \/>/gm);
   return { from: isAgricola ? "AGRICOLA" : "BAC", to: v[0].replace("<b>", "").split(" ").pop()!.replace("Ã\x81", "Á"), amount: v[1].split("$")[1].trim(), currency: CURRENCY_PARSER["$"], type: "plus" };
 };
