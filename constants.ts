@@ -24,6 +24,20 @@ export const BANK_LIST = {
       offset: TIME_OFFSETS["bac"],
     },
   ],
+  "canalesdigitales@notificacionesbancoagricola.com": [
+    {
+      subject: "Banco Agrícola - Notificación de transacción en Banca Móvil",
+      offset: TIME_OFFSETS["agricola"],
+      parser: "transfer365-send",
+    },
+  ],
+  "notificaciones_bac@baccredomatic.sv": [
+    {
+      subject: "Notificación de transferencia finalizada Transfer365",
+      offset: TIME_OFFSETS["bac"],
+      parser: "transfer365-send",
+    },
+  ],
   "ofsrep.ceosmuigw@wellsfargo.com": [
     {
       subject: "Wire Successful (Beneficiary Copy) - CEO Portal Wires Alert",
@@ -70,9 +84,29 @@ export const PLACE_REGEX_TO_CAT = {
   "pizza hut": CATEGORIES["🍣 Restaurante"],
   megapaca: CATEGORIES["🛍 Ropa"],
   "ban ban": CATEGORIES["🍣 Restaurante"],
+  "pollo campestre": CATEGORIES["🍣 Restaurante"],
+  "sushi itto": CATEGORIES["🍣 Restaurante"],
+  "boba luba": CATEGORIES["🍣 Restaurante"],
+  "panaderia teclena": CATEGORIES["🍣 Restaurante"],
+  "papa johns": CATEGORIES["🍣 Restaurante"],
+  "mc donald's": CATEGORIES["🍣 Restaurante"],
 } as const;
 
 export const PLACE_TO_CAT = {
+  CINEMARK: CATEGORIES["🍾 Salidas"],
+  "JUAN VALDEZ CAFE": CATEGORIES["🍣 Restaurante"],
+  "BLUSH LA GRAN VIA": CATEGORIES["🧼 Belleza"],
+  "ZARA LA GRAN VIA": CATEGORIES["🛍 Ropa"],
+  "BETO&#39;S": CATEGORIES["🍣 Restaurante"],
+  "BETO'S": CATEGORIES["🍣 Restaurante"],
+  "CHINA WOK PMUNDO APOPA": CATEGORIES["🍣 Restaurante"],
+  "DONKEYS VALLE DULCE": CATEGORIES["🍣 Restaurante"],
+  ROOFTOP: CATEGORIES["🍾 Salidas"],
+  "THE ROOFTOP": CATEGORIES["🍾 Salidas"],
+  "TACO CLUB": CATEGORIES["🍣 Restaurante"],
+  "GO GREEN LA GRAN VIA": CATEGORIES["🍣 Restaurante"],
+  "BEN&#39;S COFFEE": CATEGORIES["🍣 Restaurante"],
+  "BEN'S COFFEE": CATEGORIES["🍣 Restaurante"],
   Baires: CATEGORIES["💸 Income"],
   "LOS CEBOLLINES": CATEGORIES["🍣 Restaurante"],
   "RESTAURANTE BASILICO": CATEGORIES["🍣 Restaurante"],

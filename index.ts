@@ -3,7 +3,7 @@ import { simpleParser } from "mailparser";
 import { Prisma, PrismaClient } from "@prisma/client";
 import express from "express";
 import xss from "xss";
-import { BANK_LIST, CURRENCY_PARSER } from "@/constants";
+import { BANK_LIST, CATEGORIES, CURRENCY_PARSER } from "@/constants";
 import { getCategoryFromPlace, getAbsMonth, getDateRange, isValidDate, getCurrencyExchangeRates, parseHTMLMail } from "@/utils";
 import { trail } from "express-insider";
 import { ulid } from "ulid";
@@ -30,7 +30,7 @@ const sanitizeString = (string: string) => {
     whiteList: {},
     stripIgnoreTag: true,
     stripIgnoreTagBody: true,
-  });
+  }).replace("&#39;", "'");
 };
 
 export const FROM = (from: string | string[]) => {
@@ -61,14 +61,14 @@ const attachFetchHandlers = (fetcher: Imap.ImapFetch) => {
 
 const attachMsgParser = (msg: Imap.ImapMessage) => {
   msg.on("body", (stream) => {
-    simpleParser(stream, async (err, { from, subject: title, html, messageId }) => {
+    simpleParser(stream, async (err, { from, subject: title, html, messageId, date: mailReceivedAt }) => {
       if (err || !html) return console.error("attachMsgParser > simpleParser", { err });
 
       const query = BANK_LIST[from.value[0].address]?.find(({ subject }) => subject === title) || undefined;
 
       // Founded transaction mail
       if (query) {
-        const { currency, amount, cc, date, place, ...parsedMail } = parseHTMLMail(html, query);
+        const { currency, amount, cc, date, place, from: fromBank, to: toBank, ...parsedMail } = parseHTMLMail(html, query);
         const exchanges = { currency, amount: +amount.replace(/[^0-9.]/g, "") };
         if (currency !== CURRENCY_PARSER.$) {
           const exchangedAmount = amount / +(await getCurrencyExchangeRates())[currency];
@@ -77,7 +77,9 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
           exchanges["currency"] = CURRENCY_PARSER.$;
           exchanges["amount"] = exchangedAmount;
         }
-        const sanitizedPlace = sanitizeString(place);
+
+        const isTransfer365 = query.parser === "transfer365-send";
+        const sanitizedPlace = isTransfer365 ? `TRANSFER365: ${fromBank} -> ${toBank}` : sanitizeString(place);
 
         const messageIdBlock = messageId.replace("<", "").replace(">", "").split("@") as [string, string];
         const sanitizedId = `${messageIdBlock[1]}@${messageIdBlock[0]}`;
@@ -89,8 +91,8 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
             ...exchanges,
             title: sanitizedPlace,
             from: cc,
-            purchaseDate: date,
-            categoryId: getCategoryFromPlace(sanitizedPlace),
+            purchaseDate: isTransfer365 ? mailReceivedAt : date,
+            categoryId: isTransfer365 ? CATEGORIES["🃏 Miscelánea"] : getCategoryFromPlace(sanitizedPlace),
             owner: imapConfig.user,
             id: sanitizedId,
           },
