@@ -1,10 +1,11 @@
 import { BANK_LIST } from "@/constants";
-import { parseStrip, parseTransfer365, sections, segments } from "./parsers";
+import { parseInverseStrip, parseStrip, parseTransfer365, sections, segments } from "./parsers";
 
 const PARSER_PARSER = {
   parseStrip,
   segments,
   sections,
+  parseInverseStrip,
 };
 /**
  * @returns {{ cc: string, currency: string, amount: string, date: Date, place: string, type?: 'plus' | 'minus' }}

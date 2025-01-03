@@ -100,7 +100,7 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
           update: {},
           select: { id: true },
         });
-        if (sanitizedPlace !== place) console.log(`Sanitized place name: ${sanitizedPlace}, original: ${place}`);
+        if (sanitizedPlace !== place && !isTransfer365) console.log(`Sanitized place name: ${sanitizedPlace}, original: ${place}`);
         console.log(`💳 New transaction "${id} - ${sanitizedPlace} : ${exchanges.currency}${exchanges.amount}" created!`);
       }
     });

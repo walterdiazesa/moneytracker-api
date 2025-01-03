@@ -25,6 +25,21 @@ export const parseStrip = (html: string, { parseStart, parseEnd, offset }: Query
   };
 };
 
+export const parseInverseStrip = (html: string, { parseStart, parseEnd, offset }: Query<"canalesdigitales@notificacionesbancoagricola.com">) => {
+  const slice = html.slice(html.indexOf(parseStart) + parseStart.length, html.indexOf(parseEnd));
+  const [cc, , , , , , currency, amount, , , ...placeAndDate] = slice.replace(/\s{2,}/g, " ").split(" ");
+  const parsedPlaceAndDate = placeAndDate.join(" ").replace(".<p>Fecha/Hora:", "").split(" ");
+  const [date, time, ...place] = [parsedPlaceAndDate.pop(), parsedPlaceAndDate.pop(), ...parsedPlaceAndDate];
+
+  return {
+    cc,
+    currency: CURRENCY_PARSER[currency] || currency,
+    amount: amount.replace(",", ""),
+    date: getDateWithOffset(new Date(`${date} ${time}`), offset),
+    place: place.join(" ").replace(" = ", " "),
+  };
+};
+
 export const sections = (html: string, { parseStart, parseEnd, stripCard, segmentRow, segmentRowAlt, offset }: Query<"info@baccredomatic.com">) => {
   const [, cc] = html.slice(html.indexOf(stripCard[0]), html.indexOf(stripCard[1], html.indexOf(stripCard[0]))).split("terminada en <strong>");
   const slice = html.slice(html.indexOf(parseStart), html.indexOf(parseEnd));

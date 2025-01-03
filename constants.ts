@@ -26,6 +26,13 @@ export const BANK_LIST = {
   ],
   "canalesdigitales@notificacionesbancoagricola.com": [
     {
+      subject: "Notificación de transacción por compra con TDC",
+      parseStart: "Por este medio deseamos informarle que su tarjeta de cr&eacute;dito  ",
+      parseEnd: "</B><BR><BR><B>Prot&eacute;jase con",
+      parser: "parseInverseStrip",
+      offset: TIME_OFFSETS["agricola"],
+    },
+    {
       subject: "Banco Agrícola - Notificación de transacción en Banca Móvil",
       offset: TIME_OFFSETS["agricola"],
       parser: "transfer365-send",
