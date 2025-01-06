@@ -27,15 +27,15 @@ export const parseStrip = (html: string, { parseStart, parseEnd, offset }: Query
 
 export const parseInverseStrip = (html: string, { parseStart, parseEnd, offset }: Query<"canalesdigitales@notificacionesbancoagricola.com">) => {
   const slice = html.slice(html.indexOf(parseStart) + parseStart.length, html.indexOf(parseEnd));
-  const [cc, , , , , , currency, amount, , , ...placeAndDate] = slice.replace(/\s{2,}/g, " ").split(" ");
+  const [cc, , , , , , currency, amount, , ...placeAndDate] = slice.replace(/\s{2,}/g, " ").split(" ");
   const parsedPlaceAndDate = placeAndDate.join(" ").replace(".<p>Fecha/Hora:", "").split(" ");
-  const [date, time, ...place] = [parsedPlaceAndDate.pop(), parsedPlaceAndDate.pop(), ...parsedPlaceAndDate];
+  const [time, date, ...place] = [parsedPlaceAndDate.pop(), parsedPlaceAndDate.pop(), ...parsedPlaceAndDate];
 
   return {
     cc,
     currency: CURRENCY_PARSER[currency] || currency,
     amount: amount.replace(",", ""),
-    date: getDateWithOffset(new Date(`${date} ${time}`), offset),
+    date: getDateWithOffset(new Date(`${date.split("/").slice(0, 2).reverse().join("/")}/${date.split("/").pop()} ${time}`), offset),
     place: place.join(" ").replace(" = ", " "),
   };
 };

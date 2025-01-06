@@ -80,6 +80,7 @@ export const CATEGORIES = {
 } as const;
 
 export const PLACE_REGEX_TO_CAT = {
+  lacalaca: CATEGORIES["🍣 Restaurante"],
   uber: CATEGORIES["🚈 Transporte"],
   bolt: CATEGORIES["🚈 Transporte"],
   airbnb: CATEGORIES["🏠 Hospedaje"],
