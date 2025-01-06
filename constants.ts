@@ -111,6 +111,8 @@ export const PLACE_TO_CAT = {
   "DONKEYS VALLE DULCE": CATEGORIES["🍣 Restaurante"],
   ROOFTOP: CATEGORIES["🍾 Salidas"],
   "THE ROOFTOP": CATEGORIES["🍾 Salidas"],
+  "THE ROOFTOP SAN SALVADOR SV": CATEGORIES["🍾 Salidas"],
+  "HYPNOS SAN SALVADOR SV": CATEGORIES["🍾 Salidas"],
   "TACO CLUB": CATEGORIES["🍣 Restaurante"],
   "GO GREEN LA GRAN VIA": CATEGORIES["🍣 Restaurante"],
   "BEN&#39;S COFFEE": CATEGORIES["🍣 Restaurante"],
