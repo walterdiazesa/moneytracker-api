@@ -98,6 +98,7 @@ export const PLACE_REGEX_TO_CAT = {
   "panaderia teclena": CATEGORIES["🍣 Restaurante"],
   "papa johns": CATEGORIES["🍣 Restaurante"],
   "mc donald's": CATEGORIES["🍣 Restaurante"],
+  "kentucky fried chicken": CATEGORIES["🍣 Restaurante"],
 } as const;
 
 export const PLACE_TO_CAT = {
@@ -113,6 +114,7 @@ export const PLACE_TO_CAT = {
   "THE ROOFTOP": CATEGORIES["🍾 Salidas"],
   "THE ROOFTOP SAN SALVADOR SV": CATEGORIES["🍾 Salidas"],
   "HYPNOS SAN SALVADOR SV": CATEGORIES["🍾 Salidas"],
+  "AZOTEA RESTO BAR San Salvador SV": CATEGORIES["🍾 Salidas"],
   "TACO CLUB": CATEGORIES["🍣 Restaurante"],
   "GO GREEN LA GRAN VIA": CATEGORIES["🍣 Restaurante"],
   "BEN&#39;S COFFEE": CATEGORIES["🍣 Restaurante"],
