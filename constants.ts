@@ -44,6 +44,11 @@ export const BANK_LIST = {
       offset: TIME_OFFSETS["bac"],
       parser: "transfer365-send",
     },
+    {
+      subject: "Notificación de Crédito Transfer365",
+      offset: TIME_OFFSETS["bac"],
+      parser: "transfer365-receive",
+    },
   ],
   "ofsrep.ceosmuigw@wellsfargo.com": [
     {

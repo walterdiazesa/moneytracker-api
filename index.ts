@@ -68,7 +68,7 @@ const attachMsgParser = (msg: Imap.ImapMessage) => {
 
       // Founded transaction mail
       if (query) {
-        const isTransfer365 = query.parser === "transfer365-send";
+        const isTransfer365 = query.parser === "transfer365-send" || query.parser === "transfer365-receive";
         if (isTransfer365 && !html.toLowerCase().includes("monto")) return;
         const { currency, amount, cc, date, place, from: fromBank, to: toBank, ...parsedMail } = parseHTMLMail(html, query);
         const exchanges = { currency, amount: +amount.replace(/[^0-9.]/g, "") };

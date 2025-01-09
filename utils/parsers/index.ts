@@ -3,11 +3,13 @@ import { getDateWithOffset } from "@/utils";
 
 type Query<T extends keyof typeof BANK_LIST> = (typeof BANK_LIST)[T][number];
 
-export const parseTransfer365 = (html: string) => {
+export const parseTransfer365 = (html: string, receive = false) => {
   const isAgricola = html.includes("Institución destino");
-  const i = isAgricola ? html.indexOf("Institución destino") : html.indexOf("Banco Destino"); // =B3n destino
+  const i = isAgricola ? html.indexOf("Institución destino") : html.indexOf(receive ? "Banco Origen" : "Banco Destino"); // =B3n destino
   const v = html.slice(i).split(/<\/b>|<br \/>/gm);
-  return { from: isAgricola ? "AGRICOLA" : "BAC", to: v[0].replace("<b>", "").split(" ").pop()!.replace("Ã\x81", "Á"), amount: v[1].split("$")[1].trim(), currency: CURRENCY_PARSER["$"], type: "plus" };
+  const to = v[0].replace("<b>", "").split(" ").pop()!.replace("Ã\x81", "Á");
+  const from = isAgricola ? "AGRICOLA" : "BAC";
+  return { from: !receive ? from : to, to: !receive ? to : from, amount: v[1].split("$")[1].trim(), currency: CURRENCY_PARSER["$"], type: receive ? "plus" : "minus" };
 };
 
 export const parseStrip = (html: string, { parseStart, parseEnd, offset }: Query<"notificaciones@bancocuscatlan.com">) => {
